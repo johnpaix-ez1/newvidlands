@@ -1,0 +1,5 @@
+# This is a placeholder for a default endscreen MP4 video.
+# For the script to work robustly if this is just an empty file,
+# MoviePy's VideoFileClip loading will fail, and the script's
+# error handling should catch this and skip adding the endscreen.
+# Replace this with a valid short MP4 video for actual use.

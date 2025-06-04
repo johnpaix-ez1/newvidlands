@@ -1,0 +1,3 @@
+# This is a dummy MP3 file. It can be empty or a very short silent audio.
+# For the purpose of the script, its existence and loadability by MoviePy is key.
+# If MoviePy fails to load an empty file, replace this with a valid very short silent MP3/WAV.

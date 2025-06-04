@@ -127,6 +127,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 YTDLP_COOKIES_FILE = os.getenv("YTDLP_COOKIES_FILE")
 COMFYUI_SERVER_ADDRESS = os.getenv("COMFYUI_SERVER_ADDRESS", "127.0.0.1:8188") # Default if not in .env
 COMFYUI_WORKFLOW_FILE = os.getenv("COMFYUI_WORKFLOW_FILE", str(SCRIPT_DIR / "assets/default_comfyui_workflow.json"))
+ENDSCREEN_VIDEO_FILE = os.getenv("ENDSCREEN_VIDEO_FILE", str(SCRIPT_DIR / "assets/default_endscreen.mp4"))
 
 
 # Helper functions
