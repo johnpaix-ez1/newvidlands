@@ -43,7 +43,7 @@ The pipeline offers a comprehensive suite of capabilities to automate video crea
 *   **Transcript Segmentation for Visuals:** Parses the transcript to define logical segments for timing image and animation sequences.
 *   **AI-Powered Image Prompt Generation:** Leverages the Groq API (with Llama3-70b model) to create descriptive image prompts tailored to each text segment.
 *   **Image Generation:** Interfaces with ComfyUI (via its API and WebSocket) to generate images based on the AI-generated prompts.
-*   **Dynamic Image Animation:** Animates still images using MoviePy, applying effects such as Ken Burns (zoom in/out), panning, and other dynamic transitions to create visual interest.
+*   **Dynamic Image Animation:** Animates still images using MoviePy with a diverse suite of randomized effects. Capabilities include Ken Burns style zooms (in/out), multi-directional pans (horizontal, vertical), diagonal pan/zoom combinations, rotations with zoom, and fade-ins, all utilizing smooth easing functions.
 *   **Video Assembly:** Combines the synthesized voiceover, animated image clips, and optional background music into a cohesive video sequence using MoviePy.
 *   **Automated Caption Generation:** Creates styled, segment-level captions from the transcript and overlays them onto the video, synchronized with the voiceover, using MoviePy.
 *   **Customizable Endscreen:** Allows for the addition of a pre-defined endscreen video to the final output.
@@ -336,3 +336,5 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
         *   **Experimentation:** Trying out different library settings (e.g., various MoviePy animation parameters, different API prompts, ComfyUI workflow adjustments) before integrating them into the main script.
         *   **Visualization:** Displaying intermediate outputs like generated images, plotting audio data, or previewing short video clips.
     *   While invaluable for development, the entire automated pipeline is intended to be run via the CLI script.
+
+[end of README.md]
