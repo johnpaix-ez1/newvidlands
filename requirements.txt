@@ -1,0 +1,14 @@
+google-generativeai
+yt-dlp
+moviepy
+kokoro-onnx
+# misaki_g2p - Removed as it's not a direct or correct dependency for kokoro-onnx
+onnxruntime
+groq
+websocket-client
+Pillow
+requests
+numpy
+pyspellchecker
+python-dotenv
+termcolor

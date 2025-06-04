@@ -1,0 +1,2 @@
+https://example.com/link1
+https://example.org/anotherlink
