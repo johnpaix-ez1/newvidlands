@@ -1,0 +1,16 @@
+[
+    {
+        "segment_id": 1,
+        "text": "Dummy parsed segment 1 from stub.",
+        "start": 0.0,
+        "end": 5.0,
+        "duration": 5.0
+    },
+    {
+        "segment_id": 2,
+        "text": "Dummy parsed segment 2 from stub.",
+        "start": 5.5,
+        "end": 10.0,
+        "duration": 4.5
+    }
+]
