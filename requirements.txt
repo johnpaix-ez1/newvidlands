@@ -1,33 +1,26 @@
 # Core pipeline libraries
 google-generativeai
-jsonschema # For validating Gemini output
+jsonschema
 yt-dlp
 moviepy
+numpy # Essential for moviepy and other numerical tasks
 groq
-websocket-client # For ComfyUI client interaction
-Pillow # PIL, often installed as Pillow
+websocket-client
+Pillow
+openai-whisper
+requests
+pyspellchecker
+python-dotenv
+termcolor
 
 # TTS specific libraries
 kokoro-onnx
 onnxruntime
-# pypinyin # Optional G2P, kokoro-onnx might have its own or other specific needs for Japanese like SudachiPy
-# SudachiPy # For Japanese text tokenization, often used with Japanese TTS
-# SudachiDict-core # Dictionary for SudachiPy
-
-openai-whisper # For Whisper ASR
-requests
-pyspellchecker # For spellchecker (library name is 'pyspellchecker')
-python-dotenv
-termcolor
 
 # Notes on other potential dependencies (user may need to install separately if features are used):
 # - Libraries like torch, torchaudio, torchvision are large and might be installed
 #   as part of specific model requirements (e.g., for local Whisper or Kokoro if they need it).
 #   It's good to let the user install them if/when a component explicitly requires them.
-
-# General utility often pulled in as a dependency by others, but good to be aware of:
-# numpy
-# tqdm # For progress bars, can be useful
 #
 # To install these requirements:
 # pip install -r requirements.txt
