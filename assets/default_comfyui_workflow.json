@@ -1,0 +1,24 @@
+{
+  "name": "Default Dummy Workflow",
+  "version": "1.0",
+  "description": "This is a placeholder ComfyUI workflow. Replace its content with your actual ComfyUI API workflow JSON. It should ideally have identifiable nodes for positive prompt, negative prompt, seed, and image dimensions if you want the script to modify them dynamically. For example, nodes might be titled 'Positive Prompt Text', 'Negative Prompt Text', 'Seed Value', 'Image Width', 'Image Height'. The script (step_09) will try to find and update these by common titles/IDs if specific node IDs are not configured directly in the script.",
+  "nodes": [
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "title": "Load Dummy Image",
+      "properties": {},
+      "widgets_values": ["dummy_image.png"]
+    },
+    {
+      "id": 2,
+      "type": "PreviewImage",
+      "title": "Preview Dummy Image",
+      "properties": {},
+      "inputs": [{"name": "images", "type": "IMAGE", "link": 1}]
+    }
+  ],
+  "extra": {
+    "notes": "This workflow simply loads and previews an image. It does not use prompts or generate new images. It's a placeholder to ensure the COMfyUI workflow file exists and is valid JSON."
+  }
+}
