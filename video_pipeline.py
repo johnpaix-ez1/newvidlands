@@ -12,7 +12,7 @@ import io
 import subprocess
 import shutil # For step_15
 import random # For step_10 animations
-import math # For step_10 calculations and dummy TTS in step_04
+import math # For step_10 calculations
 from moviepy.editor import VideoFileClip
 
 
@@ -167,39 +167,6 @@ def get_workspace_path(source_id: str) -> pathlib.Path:
     """Gets the dedicated workspace for a source."""
     return WORKSPACE_DIR / source_id
 
-# --- Expected Schema for Step 03 (Gemini Script Generation) ---
-expected_schema = {
-    "type": "object",
-    "properties": {
-        "new_video_title": {"type": "string"},
-        "script": {"type": "string"}, # This will be mapped to "script_content" in output JSON
-        "keywords": {"type": "array", "items": {"type": "string"}}
-    },
-    "required": ["new_video_title", "script", "keywords"]
-}
-
-# --- JSON Validation Helper ---
-def validate_json_structure(data, schema_to_validate_against): # Renamed schema to schema_to_validate_against
-    """Validates a JSON data object against a given jsonschema."""
-    if not jsonschema: # Check if jsonschema library is available
-        logger.warning("jsonschema library not available, skipping schema validation.")
-        # Basic check for required keys if jsonschema is not available
-        if not all(key in data for key in schema_to_validate_against.get("required", [])):
-            logger.error(f"Basic validation failed: Missing one or more required keys: {schema_to_validate_against.get('required', [])}")
-            return False
-        return True # Passed basic check
-
-    try:
-        jsonschema.validate(instance=data, schema=schema_to_validate_against)
-        logger.info("JSON structure validation successful.")
-        return True
-    except jsonschema.exceptions.ValidationError as e:
-        logger.error(f"JSON structure validation error: {e.message}") # Using e.message for a cleaner error
-        return False
-    except Exception as e_val: # Catch other potential errors during validation
-        logger.error(f"An unexpected error occurred during JSON validation: {e_val}")
-        return False
-
 def is_step_complete(workspace_path: pathlib.Path, artifact_name: str) -> bool:
     """Checks if the .complete marker file for an artifact exists."""
     marker_file = workspace_path / f"{artifact_name}.complete"
@@ -267,390 +234,476 @@ logger.info(f"Assets directory: {ASSETS_DIR}")
 # --- Placeholder Pipeline Step Implementations (01-11) ---
 
 def step_01_process_text_input(input_text_path_str: str, workspace_path: pathlib.Path) -> str | None:
-    logger.info(f" Called step_01_process_text_input with input: {input_text_path_str}")
-    time.sleep(3)  # Critical point: simulate processing delay
+    logger.info(f"Called step_01_process_text_input with input: {input_text_path_str}")
+    time.sleep(1)  # Simulate processing delay
+
     output_artifact_name = "processed_text.json"
     output_path = workspace_path / output_artifact_name
     ensure_dir_exists(output_path.parent)
-    save_json_output(output_path, {"status": "dummy output from placeholder step_01", "input_received": input_text_path_str, "processed_content": "Placeholder processed text."})
+
+    try:
+        # Try to load the input as JSON (if it's a .json file)
+        if input_text_path_str.lower().endswith(".json"):
+            with open(input_text_path_str, "r", encoding="utf-8") as f:
+                input_data = json.load(f)
+            # If the JSON is a dict with a 'text' or 'content' field, use that, else use the whole object
+            if isinstance(input_data, dict):
+                processed_content = input_data.get("text") or input_data.get("content") or json.dumps(input_data)
+            else:
+                processed_content = json.dumps(input_data)
+        else:
+            # Otherwise, treat as plain text
+            with open(input_text_path_str, "r", encoding="utf-8") as f:
+                processed_content = f.read()
+    except Exception as e:
+        logger.error(f"Failed to load input text for step_01: {e}")
+        processed_content = ""
+
+    save_json_output(output_path, {
+        "status": "success" if processed_content else "error",
+        "input_received": input_text_path_str,
+        "processed_content": processed_content
+    })
     mark_step_complete(workspace_path, "processed_text")
-    logger.info(f" step_01_process_text_input completed. Output: {str(output_path)}")
+    logger.info(f"step_01_process_text_input completed. Output: {str(output_path)}")
     return str(output_path)
 
 def step_02_process_video_link_input(video_url_str: str, workspace_path: pathlib.Path, cookies_file_path: str | None = None) -> str | None:
-    logger.info(f" Called step_02_process_video_link_input with URL: {video_url_str}")
-    time.sleep(3)  # Critical point: simulate processing delay
+    """
+    Downloads video info (and optionally the video) using yt-dlp for a given URL.
+    If video_url_str is a path to a file (e.g., in 'input/link_sources'), loads the first non-empty line as the URL.
+    """
+    logger.info(f"Called step_02_process_video_link_input with URL or file: {video_url_str}")
+    time.sleep(1)  # Simulate processing delay
+
     if not yt_dlp:
-        logger.warning(" yt-dlp library not found. Step 02 cannot process video links.")
+        logger.warning("yt-dlp library not found. Step 02 cannot process video links.")
+        output_artifact_name = "downloaded_video_info.json"
+        output_path = workspace_path / output_artifact_name
+        ensure_dir_exists(output_path.parent)
+        save_json_output(output_path, {"status": "dummy output from placeholder step_02", "video_url": video_url_str, "comment": "yt-dlp missing or actual download skipped"})
+        mark_step_complete(workspace_path, "downloaded_video_info")
+        logger.info(f"step_02_process_video_link_input completed. Output: {str(output_path)}")
+        return str(output_path)
+
+    # If input is a file, load the first non-empty line as the URL
+    url = video_url_str
+    if os.path.isfile(video_url_str):
+        with open(video_url_str, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    url = line
+                    break
+        logger.info(f"Loaded URL from file: {url}")
+
     output_artifact_name = "downloaded_video_info.json"
     output_path = workspace_path / output_artifact_name
     ensure_dir_exists(output_path.parent)
-    save_json_output(output_path, {"status": "dummy output from placeholder step_02", "video_url": video_url_str, "comment": "yt-dlp missing or actual download skipped"})
-    mark_step_complete(workspace_path, "downloaded_video_info")
-    logger.info(f" step_02_process_video_link_input completed. Output: {str(output_path)}")
-    return str(output_path)
+
+    ydl_opts = {
+        "skip_download": True,
+        "quiet": True,
+        "no_warnings": True,
+        "ignoreerrors": True,
+        "forcejson": True,
+        "simulate": True,
+    }
+    if cookies_file_path:
+        ydl_opts["cookiefile"] = cookies_file_path
+    elif YTDLP_COOKIES_FILE:
+        ydl_opts["cookiefile"] = YTDLP_COOKIES_FILE
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+        save_json_output(output_path, {"status": "success", "video_url": url, "video_info": info})
+        mark_step_complete(workspace_path, "downloaded_video_info")
+        logger.info(f"step_02_process_video_link_input completed. Output: {str(output_path)}")
+        return str(output_path)
+    except Exception as e:
+        logger.error(f"yt-dlp failed to extract info: {e}")
+        save_json_output(output_path, {"status": "error", "video_url": url, "error": str(e)})
+        mark_step_complete(workspace_path, "downloaded_video_info")
+        return str(output_path)
+
+# Updated schema for Gemini output
+GEMINI_SCRIPT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "new_video_title": {"type": "string"},
+        "script": {"type": "string"},
+        "keywords": {"type": "array", "items": {"type": "string"}}
+    },
+    "required": ["new_video_title", "script", "keywords"]
+}
+
+def validate_json_structure(data, schema):
+    """Validate JSON data against a schema."""
+    if not jsonschema:
+        logger.warning("jsonschema library not available. Skipping validation.")
+        return True  # Assume valid if we can't check
+    try:
+        jsonschema.validate(instance=data, schema=schema)
+        return True
+    except jsonschema.ValidationError as e:
+        logger.error(f"Validation error: {e}")
+        return False
 
 def step_03_generate_gemini_script(processed_text_path_str: str, workspace_path: pathlib.Path, script_instructions: str | None = None) -> str | None:
-    logger.info(f"Starting Step 03: Generate Gemini Script from: {processed_text_path_str}")
-    output_artifact_name = "generated_script_gemini.json"
-    output_path = workspace_path / output_artifact_name
-    ensure_dir_exists(output_path.parent)
+    logger.info(f"Called step_03_generate_gemini_script with text: {processed_text_path_str}")
+    time.sleep(3)  # Simulate processing delay
 
-    # Fallback dummy content generation function
-    def _save_dummy_script(reason: str, error_details: str = ""):
-        dummy_content = {
-            "title": f"Dummy Title ({reason})",
-            "keywords": ["dummy", "placeholder", "error"],
-            "script_content": f"This is a dummy script. Reason: {reason}. Details: {error_details}"
-        }
-        save_json_output(output_path, dummy_content)
-        mark_step_complete(workspace_path, "generated_script_gemini")
-        logger.warning(f"Step 03: Saved dummy script to {output_path} due to: {reason}. Details: {error_details}")
-        return str(output_path)
+    if not genai:
+        logger.error("Gemini library (google.generativeai) not found. Step 03 cannot proceed.")
+        return None
 
-    if not genai or not HarmCategory or not HarmBlockThreshold: # Check if the genai library and its types were imported
-        return _save_dummy_script("Gemini SDK not available", "google.generativeai library or its components failed to import.")
-
-    processed_text_data = load_json_config(pathlib.Path(processed_text_path_str))
-    if not processed_text_data or "processed_content" not in processed_text_data:
-        return _save_dummy_script("Invalid input", f"Failed to load processed text or 'processed_content' key missing from {processed_text_path_str}.")
-
-    transcript = processed_text_data.get("processed_content", "")
-    if not transcript.strip():
-        return _save_dummy_script("Empty input", f"'processed_content' in {processed_text_path_str} is empty.")
-
-    prompt = f"""You are an expert content creator tasked with generating a concise and engaging video script based on the following text. The script should be suitable for a short video (e.g., YouTube Short, TikTok, Instagram Reel).
-
-The video will consist of a voiceover reading the "script" you generate, accompanied by relevant images or video clips described by the "keywords".
-
-Input Text:
----
-{transcript}
----
-
-Based on the input text, please generate:
-1.  A catchy and concise "new_video_title" (max 10-15 words).
-2.  A list of 3-7 relevant "keywords" that describe the main themes or visual elements. These keywords will be used to find images.
-3.  The main "script" content. This should be the text for the voiceover. Ensure it is well-structured, engaging, and directly derived from the input text. Do not add any conversational fluff, prefixes like "Script:", or scene directions like "(visual: sunset)". Just provide the narration text.
-
-Additional Instructions (if any):
-{script_instructions if script_instructions else "None"}
-
-Please format your entire response as a single JSON object enclosed in triple backticks (```json ... ```) with the following keys: "new_video_title", "keywords", and "script". Example:
-{{
-  "new_video_title": "Amazing Facts About The Universe!",
-  "keywords": ["space", "stars", "planets", "galaxy", "exploration"],
-  "script": "Did you know that the universe is vast and full of wonders? Stars are born from cosmic dust, and planets orbit these fiery giants..."
-}}
-"""
-
-    # Configure the Gemini client (GEMINI_API_KEY is global, genai.configure should have been called at startup if needed by lib)
-    # For safety, let's ensure genai is configured if it has a configure method and GEMINI_API_KEY is set.
-    # This is typically done once. If genai is imported, it's assumed to be ready or handle API key from environment.
-    # genai.configure(api_key=GEMINI_API_KEY) # Re-check if this is needed here or if it's handled globally.
-    # The current top-level code does not call genai.configure(). Let's assume it's not needed per call.
-
-    model = genai.GenerativeModel("gemini-1.5-flash")
-
-    safety_settings = {
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-    }
-
+    # Load processed text from step 1 and use as transcript
     try:
-        logger.info("Step 03: Calling Gemini API...")
-        response = model.generate_content(prompt, safety_settings=safety_settings)
-        content = response.text
-        logger.info("Step 03: Received response from Gemini API.")
+        with open(processed_text_path_str, "r", encoding="utf-8") as f:
+            processed_data = json.load(f)
+        transcript = processed_data.get("processed_content", "")
     except Exception as e:
-        logger.error(f"Error during Gemini API call in Step 03: {e}")
-        return _save_dummy_script("Gemini API Error", str(e))
+        logger.error(f"Failed to load processed text for Gemini script generation: {e}")
+        return None
 
-    json_match = re.search(r'```json\s*(.*?)\s*```', content, re.DOTALL | re.IGNORECASE)
-    if json_match:
-        json_str = json_match.group(1)
-    else:
-        # If no markdown code block, try to find JSON directly, being more lenient.
-        # This handles cases where Gemini might output JSON without the markdown.
-        json_search = re.search(r'\{\s*"new_video_title":.*?\}\s*$', content, re.DOTALL | re.IGNORECASE)
-        if json_search:
-            json_str = json_search.group(0)
-            logger.info("Step 03: Found JSON content without markdown, attempting to parse.")
-        else:
-            json_str = content.strip() # Fallback to stripping content if no clear JSON found
-            logger.warning("Step 03: Could not find JSON within triple backticks or a clear JSON structure. Attempting to parse the whole response.")
+    # Compose the prompt (use your detailed instructions)
+    prompt = f"""You are an expert content creator for a YouTube channel that produces concise, engaging, and insightful videos. make it just 25 to 30 seconds (100 to 120 words) long. Your task is to analyze the provided transcript and transform it into an **exceptionally compelling and unforgettable YouTube script** that makes viewers feel they've stumbled upon something truly unique and insightful. The goal is to maximize deep engagement, watch time, and a desire to share.
+    Your task is to analyze the provided transcript and transform it into an **exceptionally compelling and unforgettable YouTube script** that makes viewers feel they've stumbled upon something truly unique and insightful. The goal is to maximize deep engagement, watch time, and a desire to share.
 
+    - **Craft an Electrifying Introduction:** Start with a hook that is not just attention-grabbing but *paradigm-shifting* for the viewer regarding the topic. This could be a startling reframe of a common assumption, a deeply counter-intuitive question, a bold, almost unbelievable claim (that the script will then substantiate), or a vivid, unexpected analogy related to the transcript's core message. Aim for immediate intrigue and a "I *need* to know more" reaction. Examples of powerful hook approaches (adapt to the content): 'What if everything you thought you knew about X was a carefully constructed illusion?', 'The one tiny detail about Y that changes absolutely everything...', 'Forget X, Y, and Z; the *real* story behind [topic] is far more [adjective] than anyone dares to admit.'
+
+    - **Deliver Content as a Riveting Unveiling:** Present the information not just clearly, but as a journey of discovery. Employ dynamic, conversational language that feels like an insider sharing groundbreaking secrets.
+        - Use leading phrases that build anticipation and a sense of unique insight: 'But here's where it gets truly mind-bending...', 'The hidden layer most people miss is...', 'Consider this unexpected connection...', 'What if the real story is far stranger/simpler/more profound than we're led to believe?'
+        - Weave in moments of **dramatic emphasis, unexpected comparisons, or sharp contrasts** to make key points land with impact and stick in the viewer's mind.
+        - The script must feel like a human sharing a passionate, almost urgent message, not a dry recitation of facts. Infuse it with genuine curiosity and a sense of wonder or revelation.
+
+    - **Engineer Engagement:**
+        - **Maximize Curiosity Gaps:** Strategically pose questions or hint at revelations that compel viewers to keep watching to find the answer.
+        - **Introduce Unexpected Twists or Perspectives:** If the transcript allows, present information in a way that challenges common perceptions or reveals a surprising angle on the topic. This should be done without being misleading or resorting to clickbait.
+        - **Amplify Emotional Resonance (Authentically):** Where appropriate to the content, connect with the viewer on an emotional level. This isn't about forced sentimentality, but about highlighting the human impact, the 'wow' factor, the profound implications, or the sheer fascination of the information. Use vivid, evocative language.
+        - **Viral-Optimized Tone (Substance over Hype):** The tone should be compelling and shareable, like top-tier educational or insight-driven YouTube channels. Focus on making the *substance itself* feel shocking, surprising, or highly relevant, rather than just using superficial hype. Persuasive language should stem from the power of the ideas being presented.
+        - **Narrative Drive:** Structure the script like an unfolding mystery, a compelling argument being built piece by piece, or a journey to an 'aha!' moment. Ensure each segment logically and excitingly leads to the next.
+
+    - **Maintain Factual Integrity and Clarity:**
+        - Use simple to understand english for the understanding of someone who english is not thier first language. Do not use terms thats that need a dictionary to get its meaning, rather simpler word used in day to day conversation which still perfectly delivers the message. 
+        - Don't mention the transcript even if its the source from which you got this information explain. Stop mentioning the source.
+        - If its a news, report it as news not as a story clearly articulating what the news said
+        - Avoids repeating exact words from the transcript by using synonyms and expanding with related ideas or examples.
+        - Examine the content and determine whether it qualifies as news or should be categorized as opinion, analysis, or feature. Consider factors like timeliness, factual accuracy, and relevance in your judgment.
+        - As you generate the script, cross-check any factual claims, dates, figures, or reported events with your own knowledge and understanding. If the content appears outdated, inaccurate, or misleading, adjust it accordingly to ensure factual accuracy and clarity. Do not include unverifiable or misleading claims in the final script.
+        - If the video transcript, the author mentioned his or her name, focus only on the script and don't mention the persons name in the generated script.
+
+    The script should also adhere to these specific formatting and style points:
+    - Do not include asterisks (*) or emojis.
+    - Begin with one of your example hooks (e.g.,'Hey ...', or 'Stop scrolling ...', 'What if I told you...', 'Here is some breaking news...'), ensuring it aligns with the 'Electrifying Introduction' goal above.
+    - Flow seamlessly from one point to the next with transitional phrases. If the original script implies or contains numbered points, you can structure the generated script with numbering (e.g., first on our list, second, third...).
+    - **Conclude with Impact and a Compelling Call to Action:** End not just with an intriguing question, but with one that **challenges the viewer's perspective or ignites a desire for further exploration/discussion.** For the call to action, instead of a generic "subscribe," frame it uniquely. For example: "If you're ready to keep uncovering the [adjective, e.g., 'hidden truths', 'extraordinary insights'] behind [channel's general topic], make sure you join our community of curious minds by subscribing and hitting that notification bell – you won't want to miss what's next."
+    
+    Additionally, generate:
+    - A **new video title** that is catchy, informative, and optimized for YouTube.
+    - A list of **keywords** relevant to the video's topic to enhance SEO and discoverability.
+
+    Here's the provided transcript:
+
+    {transcript}
+
+    Please return the output as a JSON object in the following format:
+    {{
+        "new_video_title": "Your catchy video title",
+        "keywords": ["keyword1", "keyword2", "keyword3"],
+        "script": "The generated content here"
+    }}
+    """
 
     try:
+        model = genai.GenerativeModel("gemini-2.0-flash")
+        response = model.generate_content(prompt)
+        logger.info("Raw Gemini API Response: %s", response.text)
+        content = response.text
+
+        # Extract JSON from the response using regex
+        json_match = re.search(r'```json\s*(.*?)\s*```', content, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            json_str = content.strip()
+
         result = json.loads(json_str)
 
-        if not validate_json_structure(result, expected_schema): # Pass the schema itself
-            # validate_json_structure already logs the specific error
-            raise ValueError("JSON validation failed against expected_schema.")
+        if validate_json_structure(result, GEMINI_SCRIPT_SCHEMA):
+            # Normalize and clean up script
+            script = normalize_text(result["script"])
+            script = script.replace("*", "")
+            script = re.sub(r'\([^)]*\)', '', script)
+            result["script"] = script
 
-        new_video_title = result["new_video_title"]
-        # The schema asks for "script", but we save it as "script_content"
-        script_text_from_gemini = result["script"]
-        keywords = result["keywords"]
+            # Save output
+            output_artifact_name = "generated_script_gemini.json"
+            output_path = workspace_path / output_artifact_name
+            ensure_dir_exists(output_path.parent)
+            save_json_output(output_path, {"status": "success", "input_processed_text": processed_text_path_str, "script": result})
+            mark_step_complete(workspace_path, "generated_script_gemini")
+            logger.info(f"step_03_generate_gemini_script completed. Output: {str(output_path)}")
+            return str(output_path)
+        else:
+            logger.error("Gemini output JSON validation failed.")
+            return None
 
-        # Normalize and clean the script text
-        script_text_normalized = normalize_text(script_text_from_gemini) # Removes asterisks and normalizes spaces
-        # Remove text in parentheses (often contains visual cues not meant for narration)
-        script_text_cleaned = re.sub(r'\([^)]*\)', '', script_text_normalized).strip()
-        # Consolidate multiple spaces again after parenthesis removal, and ensure it's stripped.
-        script_text_cleaned = re.sub(r'\s+', ' ', script_text_cleaned).strip()
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decoding error from Gemini response: {e}")
+    except Exception as e:
+        logger.error(f"Error during Gemini script generation: {e}")
 
-        output_data = {
-            "title": new_video_title,
-            "keywords": keywords,
-            "script_content": script_text_cleaned # Save cleaned script under "script_content"
-        }
-        save_json_output(output_path, output_data)
-        mark_step_complete(workspace_path, "generated_script_gemini")
-        logger.info(f"Step 03: Gemini script generated and saved to {output_path}")
-        return str(output_path)
-
-    except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"Error processing Gemini response in Step 03: {e}. Raw content snippet: {content[:500]}")
-        return _save_dummy_script("Invalid JSON response from Gemini", f"Error: {e}. Response snippet: {content[:200]}")
-
+    return None
 
 def step_04_generate_tts_kokoro(script_path_str: str, workspace_path: pathlib.Path) -> str | None:
-    logger.info(f"Starting Step 04: Generate TTS with Kokoro for script: {script_path_str}")
+    logger.info(f"Called step_04_generate_tts_kokoro with script: {script_path_str}")
+    time.sleep(1)  # Simulate minimal processing delay
+
     output_artifact_name = "voiceover.wav"
     output_path = workspace_path / output_artifact_name
     ensure_dir_exists(output_path.parent)
 
-    # Helper to create various dummy WAV files
-    def _create_dummy_wav(reason_suffix: str):
-        logger.warning(f"Creating dummy WAV file ({reason_suffix}): {output_path}")
-        try:
-            if sf: # soundfile library is available
-                # Create a minimal silent WAV file
-                sf.write(output_path, [0.0] * 22050, samplerate=22050) # 1 second of silence
-            else:
-                # Fallback to an empty file if soundfile is not available
-                output_path.touch()
-            mark_step_complete(workspace_path, "voiceover") # Mark step as complete with dummy output
-            return str(output_path)
-        except Exception as e_dummy:
-            logger.error(f"Error creating dummy WAV file ({reason_suffix}): {e_dummy}. No voiceover will be available.")
-            # Do not mark as complete if even dummy creation fails, as it indicates a deeper issue.
+    # Load script text from step 3 output
+    try:
+        with open(script_path_str, "r", encoding="utf-8") as f:
+            script_json = json.load(f)
+
+        # Robust extraction of the script text
+        script_text = ""
+        if (
+            isinstance(script_json, dict)
+            and "script" in script_json
+            and isinstance(script_json["script"], dict)
+            and "script" in script_json["script"]
+            and isinstance(script_json["script"]["script"], str)
+        ):
+            script_text = script_json["script"]["script"]
+
+        if not script_text.strip():
+            logger.error("Script text is empty or invalid in step 3 output.")
             return None
+    except Exception as e:
+        logger.error(f"Failed to load script for TTS: {e}")
+        return None
 
     if not KOKORO_AVAILABLE:
-        logger.warning("Kokoro TTS library (kokoro_onnx or soundfile) not available.")
-        return _create_dummy_wav("Kokoro unavailable")
+        logger.error("Kokoro TTS not available. Cannot generate TTS.")
+        return None
 
-    # Load the script JSON
-    script_data = load_json_config(pathlib.Path(script_path_str))
-    if not script_data:
-        logger.error(f"Failed to load script JSON from {script_path_str} for Step 04.")
-        return _create_dummy_wav("Script load failed")
-
-    text_to_speak = script_data.get("script_content")
-    if not text_to_speak or not str(text_to_speak).strip(): # Ensure text_to_speak is treated as string
-        logger.error(f"'script_content' not found, empty, or invalid in {script_path_str}.")
-        return _create_dummy_wav("No script_content")
-
-    logger.info(f"Text for TTS (first 100 chars): '{str(text_to_speak)[:100]}...'")
-
-    # Actual Kokoro TTS generation logic
-    # KOKORO_MODEL_FILE_PATH and KOKORO_VOICES_FILE_PATH are checked in main() before this step.
-    # If KOKORO_AVAILABLE is True here, it implies the library is imported,
-    # and main() should have already validated the existence of model/voices files.
     try:
-        logger.info(f"Attempting Kokoro TTS generation with model: {KOKORO_MODEL_FILE_PATH} and voices: {KOKORO_VOICES_FILE_PATH}")
-
-        # This is where the actual Kokoro TTS call would be.
-        # Since the original step was a placeholder, we'll simulate a successful TTS call.
-        # Replace this with actual Kokoro().tts(...) call when library is fully integrated.
-        if not Kokoro or not sf: # Double check, KOKORO_AVAILABLE should cover this
-             logger.error("Internal error: Kokoro or soundfile became unavailable unexpectedly.")
-             return _create_dummy_wav("Kokoro/sf internal error")
-
-        # SIMULATING TTS call:
-        logger.info("Simulating actual Kokoro TTS generation by creating a placeholder WAV (sine wave).")
-        # Create a slightly more complex dummy file to differentiate from error/silent dummies
-        duration_seconds = max(1, min(len(str(text_to_speak)) // 10, 10)) # Estimate duration, 1 to 10 secs
-        sample_rate = 22050
-        amplitude = 0.25
-        frequency = 440 # A4 note
-        # Generate a simple sine wave
-        dummy_speech_simulation = [
-            amplitude * math.sin(2 * math.pi * frequency * x / sample_rate)
-            for x in range(int(sample_rate * duration_seconds))
-        ]
-        if not dummy_speech_simulation: # Ensure it's not empty if text_to_speak was very short
-            dummy_speech_simulation = [0.0] * sample_rate # 1 second of silence
-
-        sf.write(output_path, dummy_speech_simulation, samplerate=sample_rate)
-
-        logger.info(f"Successfully 'generated' voiceover (simulated) and saved to {output_path}")
-        mark_step_complete(workspace_path, "voiceover")
-        return str(output_path)
-
+        from kokoro_onnx import Kokoro
+        kokoro = Kokoro(KOKORO_MODEL_FILE_PATH, KOKORO_VOICES_FILE_PATH)
+        # Uncomment to debug available voices
+        print("Available voices:", kokoro.voices)
+        samples, sample_rate = kokoro.create(
+            script_text,
+            voice="af_bella",    # Change as needed
+            speed=1.0,           # Optional
+            lang="en-us"         # Optional, set if needed
+        )
+        sf.write(str(output_path), samples, sample_rate)
+        logger.info(f"Generated TTS WAV file: {output_path}")
     except Exception as e:
-        logger.error(f"Error during Kokoro TTS generation in Step 04: {e}")
-        return _create_dummy_wav(f"TTS generation error: {e}")
+        logger.error(f"Error generating TTS with Kokoro ONNX: {e}.")
+        return None
+
+    mark_step_complete(workspace_path, "voiceover")
+    logger.info(f"step_04_generate_tts_kokoro completed. Output: {str(output_path)}")
+    return str(output_path)
+
 
 def step_05_transcribe_audio_local_whisper(audio_file_path_str: str, workspace_path: pathlib.Path) -> str | None:
-    logger.info(f" Called step_05_transcribe_audio_local_whisper with audio: {audio_file_path_str}")
-    time.sleep(3)  # Critical point: simulate processing delay
-    if not whisper:
-        logger.warning(" OpenAI Whisper library not found. Step 05 will produce a dummy transcript.")
-    output_artifact_name = "voiceover_transcription_detailed.txt" # As per plan
+    logger.info(f"===========Called step_05_transcribe_audio_local_whisper with audio: {audio_file_path_str}")
+    time.sleep(5)  # Wait to ensure file is written
+    logger.info(f"AUDIO HERE SEEEE==================== audio: {audio_file_path_str}")
+
+
+    if not os.path.exists(audio_file_path_str):
+        logger.error(f"WAV file does not exist at {audio_file_path_str} before transcription!")
+        return None
+
+    output_artifact_name = "voiceover_transcription_detailed.txt"
     output_path = workspace_path / output_artifact_name
     ensure_dir_exists(output_path.parent)
-    dummy_transcript_content = "This is a dummy transcript from placeholder step_05."
-    try:
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(dummy_transcript_content)
-        logger.info(f" Created dummy transcript file: {output_path}")
-    except Exception as e:
-        logger.error(f" Error creating dummy transcript for step_05: {e}.")
+
+    if not whisper:
+        logger.error("OpenAI Whisper library not found. Step 05 cannot proceed.")
         return None
+
+    # Check if the audio file exists before attempting to transcribe
+    if not os.path.exists(audio_file_path_str):
+        logger.error(f"WAV file does not exist at {audio_file_path_str} before transcription!")
+        return None
+
+    try:
+        model = whisper.load_model("base")
+        result = model.transcribe(audio_file_path_str)
+        transcript_text = result.get("text", "")
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(transcript_text)
+        logger.info(f"Created transcript file using Whisper: {output_path}")
+    except Exception as e:
+        logger.error(f"Error transcribing audio with Whisper for step_05: {e}.")
+        return None
+
     mark_step_complete(workspace_path, "voiceover_transcription_detailed")
-    logger.info(f" step_05_transcribe_audio_local_whisper completed. Output: {str(output_path)}")
+    logger.info(f"step_05_transcribe_audio_local_whisper completed. Output: {str(output_path)}")
     return str(output_path)
 
 def step_06_correct_spelling(transcript_path_str: str, workspace_path: pathlib.Path) -> str | None:
-    logger.info(f" Called step_06_correct_spelling with transcript: {transcript_path_str}")
-    time.sleep(3)  # Critical point: simulate processing delay
-    if not SpellChecker:
-        logger.warning(" pyspellchecker library not found. Step 06 will produce a dummy corrected transcript.")
-    output_artifact_name = "corrected_transcription.txt" # As per plan
-    output_path = workspace_path / output_artifact_name
-    ensure_dir_exists(output_path.parent)
-    # Load the input transcript to make the dummy output more realistic
-    original_text = "Dummy corrected text (original load failed or empty)."
+    logger.info(f"Called step_06_correct_spelling with transcript: {transcript_path_str}")
+    time.sleep(1)  # Minimal processing delay
+
+    # Load the transcript from step 5
     try:
         with open(transcript_path_str, 'r', encoding='utf-8') as f:
-            original_text = f.read()
-    except Exception:
-        logger.warning(f" Could not read original transcript at {transcript_path_str} for step_06.")
-
-    dummy_corrected_content = original_text + "\n(Spell-corrected by placeholder step_06)."
-    try:
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(dummy_corrected_content)
-        logger.info(f" Created dummy corrected transcript file: {output_path}")
+            transcript_text = f.read()
     except Exception as e:
-        logger.error(f" Error creating dummy corrected transcript for step_06: {e}.")
+        logger.error(f"Could not read transcript at {transcript_path_str} for step_06: {e}")
         return None
+
+    # Find the original script from step 3
+    script_json_path = workspace_path / "generated_script_gemini.json"
+    try:
+        with open(script_json_path, 'r', encoding='utf-8') as f:
+            script_json = json.load(f)
+        # Robust extraction of the script text
+        original_script = ""
+        if (
+            isinstance(script_json, dict)
+            and "script" in script_json
+            and isinstance(script_json["script"], dict)
+            and "script" in script_json["script"]
+            and isinstance(script_json["script"]["script"], str)
+        ):
+            original_script = script_json["script"]["script"]
+    except Exception as e:
+        logger.warning(f"Could not read original script at {script_json_path} for step_06: {e}")
+        original_script = ""
+
+    # If SpellChecker is available, compare and correct only words that differ from the original script
+    if SpellChecker and original_script:
+        spell = SpellChecker()
+        original_words = set(original_script.split())
+        transcript_words = transcript_text.split()
+        corrected_words = []
+        for word in transcript_words:
+            # If the word is not in the original script and is misspelled, correct it
+            if word not in original_words and word.lower() not in spell and word.isalpha():
+                corrected_word = spell.correction(word)
+                corrected_words.append(corrected_word if corrected_word else word)
+            else:
+                corrected_words.append(word)
+        corrected_text = " ".join(corrected_words)
+    else:
+        corrected_text = transcript_text  # No correction if SpellChecker or original script is missing
+
+    # Save the corrected transcript back to the same file
+    try:
+        with open(transcript_path_str, 'w', encoding='utf-8') as f:
+            f.write(corrected_text)
+        logger.info(f"Corrected transcript saved to: {transcript_path_str}")
+    except Exception as e:
+        logger.error(f"Error saving corrected transcript for step_06: {e}")
+        return None
+
     mark_step_complete(workspace_path, "corrected_transcription")
-    logger.info(f" step_06_correct_spelling completed. Output: {str(output_path)}")
-    return str(output_path)
+    logger.info(f"step_06_correct_spelling completed. Output: {transcript_path_str}")
+    return transcript_path_str
 
 def step_07_parse_transcript_for_image_segments(corrected_transcript_path_str: str, workspace_path: pathlib.Path) -> str | None:
-    logger.info(f" Called step_07_parse_transcript_for_image_segments with transcript: {corrected_transcript_path_str}")
-    time.sleep(3)  # Critical point: simulate processing delay
+    """
+    Parses the transcript into segments for image prompt generation and animation.
+    Each segment contains a text chunk and its estimated duration in seconds.
+    Segmentation logic: split transcript into sentences, then group sentences into segments
+    of 4–8 seconds (based on average reading speed).
+    """
+    logger.info(f"Called step_07_parse_transcript_for_image_segments with transcript: {corrected_transcript_path_str}")
+    time.sleep(1)  # Simulate processing delay
+
     output_artifact_name = "image_segments.json"
     output_path = workspace_path / output_artifact_name
     ensure_dir_exists(output_path.parent)
-    base_text_for_segments = "Dummy segment text from placeholder step_07."
-    dummy_segments_data = {
-        "segments": [
-            {"segment_id": "scene_001_seg_001", "text_segment": f"{base_text_for_segments} (Part 1)", "start_time": 0.0, "end_time": 3.0, "image_keywords": ["placeholder", "scene1"]},
-            {"segment_id": "scene_001_seg_002", "text_segment": f"{base_text_for_segments} (Part 2)", "start_time": 3.0, "end_time": 6.0, "image_keywords": ["placeholder", "scene2"]}
-        ]
-    }
-    save_json_output(output_path, dummy_segments_data)
+
+    # Load transcript text
+    try:
+        with open(corrected_transcript_path_str, 'r', encoding='utf-8') as f:
+            transcript_text = f.read().strip()
+    except Exception as e:
+        logger.error(f"Could not read transcript at {corrected_transcript_path_str}: {e}")
+        return None
+
+    # Split transcript into sentences using regex (handles ., !, ?)
+    sentences = re.split(r'(?<=[.!?])\s+', transcript_text)
+    sentences = [s.strip() for s in sentences if s.strip()]
+
+    # Parameters for segmentation
+    avg_words_per_sec = 2.5  # ~150 wpm
+    min_segment_sec = 4
+    max_segment_sec = 8
+
+    segments = []
+    curr_segment = []
+    curr_word_count = 0
+    segment_start_time = 0.0
+
+    for sent in sentences:
+        sent_word_count = len(sent.split())
+        curr_segment.append(sent)
+        curr_word_count += sent_word_count
+        est_duration = curr_word_count / avg_words_per_sec
+
+        # If estimated duration exceeds min_segment_sec or this is the last sentence, create a segment
+        if est_duration >= min_segment_sec or sent == sentences[-1]:
+            # Clamp duration to max_segment_sec if needed
+            segment_duration = min(est_duration, max_segment_sec)
+            segment_text = " ".join(curr_segment)
+            segment_end_time = segment_start_time + segment_duration
+            segments.append({
+                "segment_id": f"scene_001_seg_{len(segments)+1:03d}",
+                "text_segment": segment_text,
+                "start_time": round(segment_start_time, 2),
+                "end_time": round(segment_end_time, 2),
+                "image_keywords": []  # To be filled in step 8
+            })
+            segment_start_time = segment_end_time
+            curr_segment = []
+            curr_word_count = 0
+
+    save_json_output(output_path, {"segments": segments})
     mark_step_complete(workspace_path, "image_segments")
-    logger.info(f" step_07_parse_transcript_for_image_segments completed. Output: {str(output_path)}")
+    logger.info(f"step_07_parse_transcript_for_image_segments completed. Output: {str(output_path)}")
     return str(output_path)
 
 def step_08_generate_image_prompts_groq(image_segments_path_str: str, workspace_path: pathlib.Path, gemini_script_path_str: str | None = None) -> str | None:
-    logger.info(f"Starting Step 08: Generate Image Prompts with Groq. Segments: {image_segments_path_str}, Gemini Script: {gemini_script_path_str}")
+    logger.info(f" Called step_08_generate_image_prompts_groq with segments: {image_segments_path_str}")
+    time.sleep(3)  # Critical point: simulate processing delay
+    if not Groq:
+        logger.warning(" Groq library not found. Step 08 will produce dummy image prompts.")
     output_artifact_name = "image_prompts_groq.json"
     output_path = workspace_path / output_artifact_name
     ensure_dir_exists(output_path.parent)
-
-    # Helper to create dummy prompts
-    def _save_dummy_prompts(reason: str, num_prompts: int = 1):
-        dummy_items = []
-        for i in range(num_prompts):
-            dummy_items.append({
-                "prompt_id": f"dummy_prompt_{reason.lower().replace(' ', '_')}_{i+1}",
-                "prompt_text": f"Dummy prompt ({reason})",
-                "original_text_segment": "N/A",
-                "segment_id": f"dummy_seg_{reason.lower().replace(' ', '_')}_{i+1}"
-            })
-        dummy_prompts_data = {"image_prompts": dummy_items}
-        save_json_output(output_path, dummy_prompts_data)
-        mark_step_complete(workspace_path, "image_prompts_groq")
-        logger.warning(f"Step 08: Saved dummy image prompts to {output_path} due to: {reason}")
-        return str(output_path)
-
-    if not Groq: # Groq is the imported library object
-        logger.warning("Groq library not found.")
-        return _save_dummy_prompts("Groq library not found")
-
-    image_segments_data = load_json_config(pathlib.Path(image_segments_path_str))
-    if not image_segments_data or "segments" not in image_segments_data or not image_segments_data["segments"]:
-        logger.error(f"Failed to load image segments from {image_segments_path_str}, 'segments' key missing, or segments list is empty.")
-        return _save_dummy_prompts("Invalid or empty segments data")
-
-    gemini_title = ""
-    gemini_keywords_list = [] # Renamed to avoid conflict with 'keywords' variable in loop
-
-    if gemini_script_path_str:
-        gemini_script_data = load_json_config(pathlib.Path(gemini_script_path_str))
-        if gemini_script_data:
-            gemini_title = gemini_script_data.get("title", "")
-            gemini_keywords_list = gemini_script_data.get("keywords", [])
-            logger.info(f"Loaded context from Gemini script: Title='{gemini_title}', Keywords={gemini_keywords_list}")
-        else:
-            logger.warning(f"Could not load Gemini script from {gemini_script_path_str} for contextual prompts. Proceeding without this context.")
-
+    image_segments_json = load_json_config(pathlib.Path(image_segments_path_str))
     generated_prompts_list = []
-    segments_to_process = image_segments_data.get("segments", []) # Already checked this above, but good for safety
-
-    for segment in segments_to_process:
-        segment_id = segment.get("segment_id", f"unknown_seg_{len(generated_prompts_list)+1}")
-        text_segment = segment.get("text_segment", "").strip()
-        # segment_keywords_from_step07 = segment.get("image_keywords", []) # Example if step 07 provided its own keywords
-
-        if not text_segment:
-            logger.warning(f"Segment {segment_id} has no text_segment. Generating a generic prompt.")
-            # Creating a generic prompt if segment text is missing
-            simulated_generated_prompt = "A visually interesting and relevant background image."
-            if gemini_title:
-                simulated_generated_prompt += f" (Context: {gemini_title})"
-        else:
-            contextual_elements = []
-            contextual_elements.append(f"Segment text: '{text_segment}'")
-            if gemini_title:
-                contextual_elements.append(f"Overall video title context: '{gemini_title}'")
-            if gemini_keywords_list: # Use the renamed variable
-                contextual_elements.append(f"Overall video keywords: {', '.join(gemini_keywords_list)}")
-            # if segment_keywords_from_step07:
-            #     contextual_elements.append(f"Segment specific keywords: {', '.join(segment_keywords_from_step07)}")
-
-            # This `final_groq_prompt_text` would be the input to the Groq API call.
-            # The Groq API would then return the actual image prompt.
-            # For this placeholder, we simulate that the descriptive string *is* the prompt.
-            simulated_generated_prompt = f"Generate an image based on: {'; '.join(contextual_elements)}."
-
-        prompt_item = {
-            "prompt_id": segment_id,
-            "prompt_text": simulated_generated_prompt, # This would be the actual generated prompt from Groq in a real scenario
-            "original_text_segment": text_segment if text_segment else "N/A (Segment text was empty)",
-            "segment_id": segment_id
-        }
-        generated_prompts_list.append(prompt_item)
-        logger.info(f"Prepared placeholder prompt for segment {segment_id}: {simulated_generated_prompt[:100]}...")
-
-    if not generated_prompts_list: # Should not happen if segments_to_process was not empty, but as a safeguard
-        logger.warning("No prompts were generated (e.g. all segments were empty and no context). Creating a final fallback dummy prompt.")
-        return _save_dummy_prompts("No prompts generated", 1)
-
+    if image_segments_json and "segments" in image_segments_json:
+        for seg in image_segments_json["segments"]:
+            segment_id = seg.get("segment_id", f"unknown_seg_{len(generated_prompts_list)+1}")
+            text_segment = seg.get("text_segment", "A generic placeholder scene.")
+            generated_prompts_list.append({
+                "prompt_id": segment_id, "prompt_text": f"Dummy prompt for {segment_id}: {text_segment[:50]}...",
+                "original_text_segment": text_segment, "segment_id": segment_id
+            })
+    else:
+        generated_prompts_list.append({
+            "prompt_id": "fallback_seg_001", "prompt_text": "Fallback dummy prompt.",
+            "original_text_segment": "No segment data.", "segment_id": "fallback_seg_001"
+        })
     final_prompts_output = {"image_prompts": generated_prompts_list}
     save_json_output(output_path, final_prompts_output)
     mark_step_complete(workspace_path, "image_prompts_groq")
-    logger.info(f"Step 08: Image prompts (placeholder) generated and saved to {output_path}")
+    logger.info(f" step_08_generate_image_prompts_groq completed. Output: {str(output_path)}")
     return str(output_path)
 
 def step_09_generate_images_comfyui(image_prompts_path_str: str, workspace_path: pathlib.Path) -> str | None:
@@ -957,8 +1010,11 @@ EASING_FUNCTIONS_LIST = [_ease_in_quad, _ease_out_quad, _ease_in_out_quad]
 ANIMATION_COVER_SCALES = {
     "static": 1.0,
     "zoom_in": 1.0,
-    "zoom_out": 1.2, # Starts zoomed in, so prepared image needs to be at that initial zoomed size
-    "pan_left": 1.25, "pan_right": 1.25, "pan_up": 1.25, "pan_down": 1.25,
+    "zoom_out": 1.2,  # Starts zoomed in, so prepared image needs to be at that initial zoomed size
+    "pan_left": 1.25,
+    "pan_right": 1.25,
+    "pan_up": 1.25,
+    "pan_down": 1.25,
     "diag_pan_zoom_in_lu": 1.25, "diag_pan_zoom_in_ld": 1.25,
     "diag_pan_zoom_in_ru": 1.25, "diag_pan_zoom_in_rd": 1.25,
     "zoom_fade_in": 1.0,
@@ -1011,8 +1067,8 @@ def step_10_animate_images(generated_images_manifest_path_str: str, image_segmen
 
 def main():
     # Example input (adjust as needed)
-    input_text_path = "input/example.txt"
-    workspace_path = WORKSPACE_DIR / "example_run"
+    input_text_path = "input/text.txt"  # Path to the input text file
+    workspace_path = WORKSPACE_DIR / "main_pipeline_workspace"
     ensure_dir_exists(workspace_path)
 
     # Step 1: Process text input
@@ -1023,6 +1079,9 @@ def main():
 
     # Step 2: (Optional) Process video link input
     # video_info = step_02_process_video_link_input("https://example.com/video", workspace_path)
+    # if not video_info:
+    #     logger.error("Step 2 failed.")
+    #     return
 
     # Step 3: Generate Gemini script
     if not GEMINI_API_KEY:
@@ -1034,7 +1093,7 @@ def main():
         return
 
     # Step 4: Generate TTS
-    if KOKORO_AVAILABLE: # Only check paths if Kokoro library is available
+    if KOKORO_AVAILABLE:
         if not KOKORO_MODEL_FILE_PATH or not pathlib.Path(KOKORO_MODEL_FILE_PATH).exists():
             logger.error(f"Kokoro TTS model file not found at specified path: {KOKORO_MODEL_FILE_PATH}. Please configure KOKORO_MODEL_FILE_PATH in .env and ensure the file exists. Exiting.")
             sys.exit(1)
@@ -1074,13 +1133,10 @@ def main():
         return
 
     # Step 9: Generate images
-    if not COMFYUI_SERVER_ADDRESS: # Check if it's None or empty
+    if not COMFYUI_SERVER_ADDRESS:
         logger.error("COMFYUI_SERVER_ADDRESS is not set. Please configure it in your .env file. Exiting.")
         sys.exit(1)
 
-    # Check COMFYUI_WORKFLOW_FILE
-    # Default path is str(ASSETS_DIR / "default_comfyui_workflow.json")
-    # If it's the default, and default doesn't exist OR if it's a custom path and that path doesn't exist
     comfyui_workflow_path = pathlib.Path(COMFYUI_WORKFLOW_FILE)
     is_default_workflow_path = (COMFYUI_WORKFLOW_FILE == str(ASSETS_DIR / "default_comfyui_workflow.json"))
 
