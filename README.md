@@ -91,8 +91,7 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
 
 ## Running in Google Colab
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/YOUR_REPOSITORY_NAME/blob/main/video_pipeline_colab.ipynb)
-
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.google.com/github/johnpaix-ez1/newvidlands/blob/main/video_pipeline_colab.ipyn works:**
 
 You can also run this video generation pipeline in a Google Colab notebook. This is useful for leveraging Google's free GPU resources (subject to availability and limits) for tasks like AI model inference and for an environment where Python and many common libraries are already accessible.
 
