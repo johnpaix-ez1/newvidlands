@@ -16,6 +16,7 @@ termcolor
 # TTS specific libraries
 kokoro-onnx
 onnxruntime
+soundfile # For saving audio from Kokoro TTS
 
 # Notes on other potential dependencies (user may need to install separately if features are used):
 # - Libraries like torch, torchaudio, torchvision are large and might be installed

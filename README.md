@@ -71,7 +71,10 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
 *   **ComfyUI Server:** A running instance of ComfyUI is essential for image generation (Step 09).
     *   The server must be accessible via HTTP (for API calls like fetching history) and WebSocket (for real-time progress updates and image fetching). The `video_pipeline.py` script will prefix `http://` or `ws://` as needed, so provide only `host:port` in the configuration.
     *   For installation and setup instructions, refer to the [ComfyUI GitHub repository](https://github.com/comfyanonymous/ComfyUI).
-    *   You will also need a ComfyUI workflow JSON file that is compatible with the API (i.e., can be programmatically updated with prompts, seeds, etc.). A default placeholder is provided in `assets/default_comfyui_workflow.json`, but should be replaced with a functional workflow.
+    *   You will also need a ComfyUI workflow JSON file that is compatible with the API. A default placeholder is provided in `assets/default_comfyui_workflow.json`, but should be replaced with a functional workflow.
+*   **Kokoro TTS Models:** For actual Text-to-Speech generation with Kokoro-TTS (Step 04), you need the model and voices files.
+    *   Download `kokoro-v1.0.onnx` and `voices-v1.0.bin` from the [Kokoro-ONNX GitHub releases page](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0).
+    *   These files need to be placed in a location accessible by the script, configured via `.env` variables (see Installation). If not provided or found, dummy TTS audio will be generated.
 *   **(Optional) YouTube Cookies:** If you plan to process age-restricted or login-required YouTube videos using `yt-dlp`, you may need to provide a browser cookie file.
     *   This can be configured via the `YTDLP_COOKIES_FILE` variable in your `.env` file.
     *   Refer to `yt-dlp` documentation for instructions on how to export cookies (e.g., using a browser extension).
@@ -134,6 +137,10 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
             *   Default: `assets/default_comfyui_workflow.json`
         *   `ENDSCREEN_VIDEO_FILE`: Path to your endscreen video.
             *   Default: `assets/default_endscreen.mp4`
+        *   `KOKORO_MODEL_FILE_PATH`: Path to the `kokoro-v1.0.onnx` model file.
+            *   Default: `assets/kokoro_models/kokoro-v1.0.onnx`
+        *   `KOKORO_VOICES_FILE_PATH`: Path to the `voices-v1.0.bin` voices file.
+            *   Default: `assets/kokoro_models/voices-v1.0.bin`
         *   `YTDLP_COOKIES_FILE`: (Optional) Absolute or relative path to your `cookies.txt` file for `yt-dlp`.
 
 5.  **Set Up Assets:**
@@ -141,20 +148,21 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
     *   **ComfyUI Workflow (`assets/default_comfyui_workflow.json` or custom path):**
         *   The file specified by `COMFYUI_WORKFLOW_FILE` in your `.env` file must be a valid ComfyUI API workflow JSON.
         *   The default `assets/default_comfyui_workflow.json` is a **placeholder** and **must be replaced** with your own functional workflow designed for API use.
-        *   For dynamic updates by the script, your workflow should ideally have nodes with recognizable titles (or you'll need to update node IDs in `video_pipeline.py`) for:
-            *   Positive prompt input.
-            *   Negative prompt input.
-            *   Seed value input.
-            *   (Optional) Image width and height inputs (e.g., in an "Empty Latent Image" node).
+    *   **Kokoro TTS Models (`assets/kokoro_models/` or custom paths):**
+        *   Download `kokoro-v1.0.onnx` and `voices-v1.0.bin` from the [Kokoro-ONNX GitHub releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0).
+        *   Create a directory, e.g., `assets/kokoro_models/`.
+        *   Place the downloaded `.onnx` and `.bin` files into this directory.
+        *   If you use this recommended directory structure, the default paths for `KOKORO_MODEL_FILE_PATH` and `KOKORO_VOICES_FILE_PATH` in your `.env` file (copied from `.env.example`) will point to these files correctly.
+        *   If you place the files elsewhere, you **must** update `KOKORO_MODEL_FILE_PATH` and `KOKORO_VOICES_FILE_PATH` in your `.env` file with the correct absolute or relative paths.
     *   **Fonts (`assets/fonts/`):**
         *   Place `.ttf` or `.otf` font files in this directory.
-        *   A placeholder `LiberationSans-Regular.ttf` is included. The script will try to use this or common system fonts if this specific one is not fully functional. For best results, provide a valid font file here.
+        *   A placeholder `LiberationSans-Regular.ttf` is included.
     *   **Background Sounds (`assets/bgsound/`):**
         *   Place background audio files (e.g., `.mp3`, `.wav`) here.
-        *   A placeholder `dummy_bg.mp3` is included. The script randomly selects a file from this directory for background music.
+        *   A placeholder `dummy_bg.mp3` is included.
     *   **Endscreen Video (`assets/default_endscreen.mp4` or custom path):**
-        *   The file specified by `ENDSCREEN_VIDEO_FILE` should be your desired endscreen video (e.g., `.mp4`).
-        *   The provided `assets/default_endscreen.mp4` is an **empty placeholder** and should be replaced with a real video file if you wish to use the endscreen feature. Otherwise, the script will gracefully skip adding an endscreen.
+        *   The file specified by `ENDSCREEN_VIDEO_FILE` should be your desired endscreen video.
+        *   The provided `assets/default_endscreen.mp4` is an empty placeholder.
 
 ## Usage
 
@@ -235,8 +243,8 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
     *   **Solution:** FFmpeg is a crucial dependency for video and audio manipulation. Install it from the official [FFmpeg website](https://ffmpeg.org/download.html) and ensure that the directory containing the `ffmpeg` (and `ffprobe`) executable is added to your system's PATH environment variable.
 *   **Problem:** Script fails with `FileNotFoundError` for assets like workflows, fonts, or endscreen videos.
     *   **Solution:**
-        *   Verify that all paths specified in your `.env` file (e.g., `COMFYUI_WORKFLOW_FILE`, `ENDSCREEN_VIDEO_FILE`) are correct.
-        *   Ensure the `assets/` directory and its subdirectories (`fonts/`, `bgsound/`) are present in the project root and contain the necessary files (even if they are placeholders, as described in the Installation section).
+        *   Verify that all paths specified in your `.env` file (e.g., `COMFYUI_WORKFLOW_FILE`, `ENDSCREEN_VIDEO_FILE`, `KOKORO_MODEL_FILE_PATH`, `KOKORO_VOICES_FILE_PATH`) are correct.
+        *   Ensure the `assets/` directory and its subdirectories (`fonts/`, `bgsound/`, `kokoro_models/`) are present in the project root and contain the necessary files.
         *   Always run `python video_pipeline.py` from the root directory of the project.
 
 ### API Key and External Service Issues
@@ -259,8 +267,12 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
 
 ### Library-Specific Issues
 
-*   **Problem:** Errors from `kokoro-onnx` or `onnxruntime` during Text-to-Speech (TTS) generation.
-    *   **Solution:** These libraries can sometimes have specific compatibility requirements. Ensure you are using a compatible Python version (as per `kokoro-onnx` documentation, if available). There might be version conflicts with `onnxruntime` or other dependencies. Check the `kokoro-onnx` GitHub repository for any reported issues. The script is designed to fall back to dummy TTS if Kokoro-TTS fails, allowing the pipeline to continue.
+*   **Problem:** Errors from `kokoro-onnx` or `onnxruntime` during Text-to-Speech (TTS) generation, or dummy TTS is always used.
+    *   **Solution:**
+        *   Ensure `KOKORO_MODEL_FILE_PATH` and `KOKORO_VOICES_FILE_PATH` in your `.env` file correctly point to your downloaded `kokoro-v1.0.onnx` and `voices-v1.0.bin` files.
+        *   Verify the files were downloaded correctly and are not corrupted.
+        *   These libraries can sometimes have specific compatibility requirements. Ensure you are using a compatible Python version. There might be version conflicts with `onnxruntime` or other dependencies. Check the `kokoro-onnx` GitHub repository for any reported issues.
+        *   The script is designed to fall back to dummy TTS if Kokoro-TTS fails, allowing the pipeline to continue.
 *   **Problem:** Errors from `openai-whisper` during audio transcription (e.g., model download failure, `ffmpeg` not found by Whisper, CUDA errors if using GPU).
     *   **Solution:**
         *   A stable internet connection is needed when Whisper downloads a model for the first time.
@@ -336,5 +348,3 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
         *   **Experimentation:** Trying out different library settings (e.g., various MoviePy animation parameters, different API prompts, ComfyUI workflow adjustments) before integrating them into the main script.
         *   **Visualization:** Displaying intermediate outputs like generated images, plotting audio data, or previewing short video clips.
     *   While invaluable for development, the entire automated pipeline is intended to be run via the CLI script.
-
-[end of README.md]
