@@ -230,6 +230,221 @@ logger.info(f"Assets directory: {ASSETS_DIR}")
 # ... (step_08_generate_image_prompts_groq and its helpers GROQ_EXPECTED_SCHEMA_ITEM, _validate_groq_item_structure, _generate_image_prompts_batch_groq_helper) ...
 # ... (step_09_generate_images_comfyui and its helpers _comfyui_load_workflow, _comfyui_queue_prompt, _comfyui_get_image_data, _comfyui_get_history, _comfyui_fetch_images_from_history_ws, _create_dummy_comfyui_images_and_manifest) ...
 
+# --- Placeholder Pipeline Step Implementations (01-11) ---
+
+def step_01_process_text_input(input_text_path_str: str, workspace_path: pathlib.Path) -> str | None:
+    logger.info(f"[Placeholder] Called step_01_process_text_input with input: {input_text_path_str}")
+    output_artifact_name = "processed_text.json"
+    output_path = workspace_path / output_artifact_name
+    ensure_dir_exists(output_path.parent)
+    save_json_output(output_path, {"status": "dummy output from placeholder step_01", "input_received": input_text_path_str, "processed_content": "Placeholder processed text."})
+    mark_step_complete(workspace_path, "processed_text")
+    logger.info(f"[Placeholder] step_01_process_text_input completed. Output: {str(output_path)}")
+    return str(output_path)
+
+def step_02_process_video_link_input(video_url_str: str, workspace_path: pathlib.Path, cookies_file_path: str | None = None) -> str | None:
+    logger.info(f"[Placeholder] Called step_02_process_video_link_input with URL: {video_url_str}")
+    if not yt_dlp:
+        logger.warning("[Placeholder] yt-dlp library not found. Step 02 cannot process video links.")
+    output_artifact_name = "downloaded_video_info.json"
+    output_path = workspace_path / output_artifact_name
+    ensure_dir_exists(output_path.parent)
+    save_json_output(output_path, {"status": "dummy output from placeholder step_02", "video_url": video_url_str, "comment": "yt-dlp missing or actual download skipped"})
+    mark_step_complete(workspace_path, "downloaded_video_info")
+    logger.info(f"[Placeholder] step_02_process_video_link_input completed. Output: {str(output_path)}")
+    return str(output_path)
+
+def step_03_generate_gemini_script(processed_text_path_str: str, workspace_path: pathlib.Path, script_instructions: str | None = None) -> str | None:
+    logger.info(f"[Placeholder] Called step_03_generate_gemini_script with text: {processed_text_path_str}")
+    if not genai:
+        logger.warning("[Placeholder] Gemini library (google.generativeai) not found. Step 03 will produce minimal dummy script.")
+    output_artifact_name = "generated_script_gemini.json" # As per plan
+    output_path = workspace_path / output_artifact_name
+    ensure_dir_exists(output_path.parent)
+    dummy_script_content = {
+        "title": "Dummy Title from Placeholder",
+        "scenes": [
+            {"scene_number": 1, "narration": "This is a dummy narration for scene 1.", "visual_description": "A placeholder visual for scene 1."},
+            {"scene_number": 2, "narration": "This is another dummy narration for scene 2.", "visual_description": "A placeholder visual for scene 2."}
+        ]
+    }
+    save_json_output(output_path, {"status": "dummy output from placeholder step_03", "input_processed_text": processed_text_path_str, "script": dummy_script_content})
+    mark_step_complete(workspace_path, "generated_script_gemini")
+    logger.info(f"[Placeholder] step_03_generate_gemini_script completed. Output: {str(output_path)}")
+    return str(output_path)
+
+def step_04_generate_tts_kokoro(script_path_str: str, workspace_path: pathlib.Path) -> str | None:
+    logger.info(f"[Placeholder] Called step_04_generate_tts_kokoro with script: {script_path_str}")
+    if not KOKORO_AVAILABLE:
+        logger.warning("[Placeholder] Kokoro TTS library not available. Step 04 will create a dummy WAV file.")
+    output_artifact_name = "voiceover.wav"
+    output_path = workspace_path / output_artifact_name
+    ensure_dir_exists(output_path.parent)
+    try:
+        output_path.touch() # Create an empty file
+        logger.info(f"[Placeholder] Created dummy WAV file: {output_path}")
+    except Exception as e:
+        logger.error(f"[Placeholder] Error creating dummy WAV for step_04: {e}.")
+        return None
+    mark_step_complete(workspace_path, "voiceover")
+    logger.info(f"[Placeholder] step_04_generate_tts_kokoro completed. Output: {str(output_path)}")
+    return str(output_path)
+
+def step_05_transcribe_audio_local_whisper(audio_file_path_str: str, workspace_path: pathlib.Path) -> str | None:
+    logger.info(f"[Placeholder] Called step_05_transcribe_audio_local_whisper with audio: {audio_file_path_str}")
+    if not whisper:
+        logger.warning("[Placeholder] OpenAI Whisper library not found. Step 05 will produce a dummy transcript.")
+    output_artifact_name = "voiceover_transcription_detailed.txt" # As per plan
+    output_path = workspace_path / output_artifact_name
+    ensure_dir_exists(output_path.parent)
+    dummy_transcript_content = "This is a dummy transcript from placeholder step_05."
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(dummy_transcript_content)
+        logger.info(f"[Placeholder] Created dummy transcript file: {output_path}")
+    except Exception as e:
+        logger.error(f"[Placeholder] Error creating dummy transcript for step_05: {e}.")
+        return None
+    mark_step_complete(workspace_path, "voiceover_transcription_detailed")
+    logger.info(f"[Placeholder] step_05_transcribe_audio_local_whisper completed. Output: {str(output_path)}")
+    return str(output_path)
+
+def step_06_correct_spelling(transcript_path_str: str, workspace_path: pathlib.Path) -> str | None:
+    logger.info(f"[Placeholder] Called step_06_correct_spelling with transcript: {transcript_path_str}")
+    if not SpellChecker:
+        logger.warning("[Placeholder] pyspellchecker library not found. Step 06 will produce a dummy corrected transcript.")
+    output_artifact_name = "corrected_transcription.txt" # As per plan
+    output_path = workspace_path / output_artifact_name
+    ensure_dir_exists(output_path.parent)
+    # Load the input transcript to make the dummy output more realistic
+    original_text = "Dummy corrected text (original load failed or empty)."
+    try:
+        with open(transcript_path_str, 'r', encoding='utf-8') as f:
+            original_text = f.read()
+    except Exception:
+        logger.warning(f"[Placeholder] Could not read original transcript at {transcript_path_str} for step_06.")
+
+    dummy_corrected_content = original_text + "\n(Spell-corrected by placeholder step_06)."
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(dummy_corrected_content)
+        logger.info(f"[Placeholder] Created dummy corrected transcript file: {output_path}")
+    except Exception as e:
+        logger.error(f"[Placeholder] Error creating dummy corrected transcript for step_06: {e}.")
+        return None
+    mark_step_complete(workspace_path, "corrected_transcription")
+    logger.info(f"[Placeholder] step_06_correct_spelling completed. Output: {str(output_path)}")
+    return str(output_path)
+
+def step_07_parse_transcript_for_image_segments(corrected_transcript_path_str: str, workspace_path: pathlib.Path) -> str | None:
+    logger.info(f"[Placeholder] Called step_07_parse_transcript_for_image_segments with transcript: {corrected_transcript_path_str}")
+    output_artifact_name = "image_segments.json"
+    output_path = workspace_path / output_artifact_name
+    ensure_dir_exists(output_path.parent)
+    base_text_for_segments = "Dummy segment text from placeholder step_07."
+    # Optionally, try to read from corrected_transcript_path_str to make it slightly more realistic
+    # but not critical for placeholder.
+    dummy_segments_data = {
+        "segments": [
+            {"segment_id": "scene_001_seg_001", "text_segment": f"{base_text_for_segments} (Part 1)", "start_time": 0.0, "end_time": 3.0, "image_keywords": ["placeholder", "scene1"]},
+            {"segment_id": "scene_001_seg_002", "text_segment": f"{base_text_for_segments} (Part 2)", "start_time": 3.0, "end_time": 6.0, "image_keywords": ["placeholder", "scene2"]}
+        ]
+    }
+    save_json_output(output_path, dummy_segments_data)
+    mark_step_complete(workspace_path, "image_segments")
+    logger.info(f"[Placeholder] step_07_parse_transcript_for_image_segments completed. Output: {str(output_path)}")
+    return str(output_path)
+
+def step_08_generate_image_prompts_groq(image_segments_path_str: str, workspace_path: pathlib.Path, gemini_script_path_str: str | None = None) -> str | None:
+    logger.info(f"[Placeholder] Called step_08_generate_image_prompts_groq with segments: {image_segments_path_str}")
+    if not Groq:
+        logger.warning("[Placeholder] Groq library not found. Step 08 will produce dummy image prompts.")
+    output_artifact_name = "image_prompts_groq.json"
+    output_path = workspace_path / output_artifact_name
+    ensure_dir_exists(output_path.parent)
+    image_segments_json = load_json_config(pathlib.Path(image_segments_path_str))
+    generated_prompts_list = []
+    if image_segments_json and "segments" in image_segments_json:
+        for seg in image_segments_json["segments"]:
+            segment_id = seg.get("segment_id", f"unknown_seg_{len(generated_prompts_list)+1}")
+            text_segment = seg.get("text_segment", "A generic placeholder scene.")
+            generated_prompts_list.append({
+                "prompt_id": segment_id, "prompt_text": f"Dummy prompt for {segment_id}: {text_segment[:50]}...",
+                "original_text_segment": text_segment, "segment_id": segment_id
+            })
+    else:
+        generated_prompts_list.append({
+            "prompt_id": "fallback_seg_001", "prompt_text": "Fallback dummy prompt.",
+            "original_text_segment": "No segment data.", "segment_id": "fallback_seg_001"
+        })
+    final_prompts_output = {"image_prompts": generated_prompts_list}
+    save_json_output(output_path, final_prompts_output)
+    mark_step_complete(workspace_path, "image_prompts_groq")
+    logger.info(f"[Placeholder] step_08_generate_image_prompts_groq completed. Output: {str(output_path)}")
+    return str(output_path)
+
+def step_09_generate_images_comfyui(image_prompts_path_str: str, workspace_path: pathlib.Path) -> str | None:
+    logger.info(f"[Placeholder] Called step_09_generate_images_comfyui with prompts: {image_prompts_path_str}")
+
+    pillow_fully_available = bool(Image and ImageDraw and ImageFont) # True if all three are imported
+    if not pillow_fully_available:
+        logger.warning("[Placeholder] Pillow library (Image, ImageDraw, ImageFont) not fully available. Will create empty .png files.")
+    if not websocket:
+         logger.warning("[Placeholder] websocket-client library not found. Actual ComfyUI communication would fail.")
+
+    output_artifact_name = "generated_images_manifest.json"
+    images_output_dir = workspace_path / "dummy_images" # Changed from "generated_images_comfyui" for clarity
+    ensure_dir_exists(images_output_dir)
+    output_manifest_path = workspace_path / output_artifact_name
+
+    manifest_data = {"generated_images": []}
+    prompts_input_json = load_json_config(pathlib.Path(image_prompts_path_str))
+    prompts_list = []
+    if prompts_input_json and "image_prompts" in prompts_input_json:
+        prompts_list = prompts_input_json["image_prompts"]
+    else:
+        logger.warning(f"[Placeholder] 'image_prompts' key not found or is empty in {image_prompts_path_str} for step_09.")
+
+    num_dummy_images = len(prompts_list) if prompts_list else 2 # Create a couple if no prompts
+
+    for i in range(num_dummy_images):
+        prompt_id = prompts_list[i].get("prompt_id", f"dummy_prompt_id_{i+1}") if prompts_list else f"segment_dummy_{i+1}"
+        prompt_text = prompts_list[i].get("prompt_text", f"Dummy prompt for {prompt_id}") if prompts_list else f"Dummy prompt for {prompt_id}"
+
+        dummy_image_name = f"dummy_image_{prompt_id}.png"
+        dummy_image_path = images_output_dir / dummy_image_name
+
+        if pillow_fully_available:
+            try:
+                img = Image.new('RGB', (100, 100), color = (random.randint(0,255), random.randint(0,255), random.randint(0,255)))
+                draw = ImageDraw.Draw(img)
+                try:
+                    # Attempt to load a bundled font, fall back to default.
+                    font_to_use = ImageFont.truetype(str(ASSETS_DIR / "fonts" / "LiberationSans-Regular.ttf"), 10)
+                except IOError:
+                    font_to_use = ImageFont.load_default()
+                draw.text((10,10), f"Dummy for\n{prompt_id}", fill=(0,0,0), font=font_to_use)
+                img.save(dummy_image_path, "PNG")
+                logger.info(f"[Placeholder] Created actual dummy PNG: {dummy_image_path}")
+            except Exception as e_pil:
+                logger.warning(f"[Placeholder] Pillow is available but failed to create dummy PNG ({dummy_image_name}): {e_pil}. Creating empty file.")
+                dummy_image_path.touch() # Create empty file
+        else:
+            logger.warning(f"[Placeholder] Pillow not fully available. Creating empty .png file for {dummy_image_name}.")
+            dummy_image_path.touch() # Create empty file
+
+        manifest_data["generated_images"].append({
+            "prompt_id": prompt_id,
+            "prompt_text": prompt_text,
+            "image_path_local": str(dummy_image_path),
+            "source_prompt_info": prompts_list[i] if prompts_list else {"prompt_id": prompt_id, "prompt_text": prompt_text}
+        })
+
+    save_json_output(output_manifest_path, manifest_data)
+    mark_step_complete(workspace_path, "generated_images_manifest") # As per prior successful runs
+    logger.info(f"[Placeholder] step_09_generate_images_comfyui completed. Manifest: {str(output_manifest_path)}")
+    return str(output_manifest_path)
+
 # --- Animation Helpers for Step 10 ---
 
 # Easing Functions for Animations
@@ -533,6 +748,9 @@ def step_10_animate_images(generated_images_manifest_path_str: str, image_segmen
         segment_id = image_data.get("prompt_id")
         if not segment_id: continue
 
+        # Initialize chosen_anim_name here before the try block
+        chosen_anim_name = "unknown_due_to_early_error"
+
         target_duration = segment_durations.get(segment_id, 3.0)
         if target_duration <= 0: target_duration = 3.0 # Ensure positive duration
 
@@ -631,88 +849,106 @@ def step_10_animate_images(generated_images_manifest_path_str: str, image_segmen
 
 
 def step_11_assemble_video_moviepy(voiceover_path_str: str, animated_clips_manifest_path_str: str, workspace_path: pathlib.Path) -> str | None:
-    logger.info(f"Starting step_11_assemble_video_moviepy with voiceover: {voiceover_path_str}")
+def step_11_assemble_video_moviepy(voiceover_path_str: str, animated_clips_manifest_path_str: str, final_video_dir: pathlib.Path, workspace_path: pathlib.Path, source_id: str) -> str | None:
+    logger.info(f"[Placeholder] Called step_11_assemble_video_moviepy with voiceover: {voiceover_path_str}, animated_clips_manifest: {animated_clips_manifest_path_str}")
+    # Note: final_video_dir is used here instead of workspace_path for the output file itself.
+    output_filename = f"final_video_placeholder_{source_id}_{int(time.time())}.mp4"
+    output_path = final_video_dir / output_filename # Output directly to final_video_dir as per instructions
 
-# /// START OF CODE TO PASTE ///
+    # Ensure the specific output directory within final_video_dir exists, if it's meant to be unique per source_id
+    # For this placeholder, we'll assume final_video_dir is already the correct target folder (e.g. SCRIPT_DIR / "final_videos")
+    ensure_dir_exists(final_video_dir)
 
-def ensure_example_batch_files_exist():
-    """
-    Ensures example batch files exist for demonstration or testing.
-    You can expand this to generate or copy example manifests if needed.
-    """
-    example_batch_dir = SCRIPT_DIR / "example_batch"
-    ensure_dir_exists(example_batch_dir)
-    # You can add logic here to generate dummy manifests if needed.
+    try:
+        with open(output_path, 'w') as f:
+            f.write("This is a dummy MP4 file created by placeholder step_11.")
+        logger.info(f"[Placeholder] step_11_assemble_video_moviepy completed. Dummy output: {str(output_path)}")
+        return str(output_path)
+    except Exception as e:
+        logger.error(f"[Placeholder] Failed to create dummy output for step_11: {e}")
+        return None
 
 async def main():
     """
     Main entrypoint for the video pipeline.
-    This function should orchestrate the full workflow, calling each step in order.
+    Orchestrates the full workflow from text input to final video assembly.
     """
     logger.info("Starting main video pipeline workflow...")
 
-    # Example paths - adjust as needed for your project structure and input files.
-    workspace_path = WORKSPACE_DIR / "example_run"
-    ensure_dir_exists(workspace_path)
+    # --- Configuration & Setup ---
+    initial_text_input_file = INPUT_DIR / "text_sources" / "text1.json"
+    ensure_dir_exists(initial_text_input_file.parent)
+    if not initial_text_input_file.exists():
+        logger.info(f"Creating dummy input file: {initial_text_input_file}")
+        save_json_output(initial_text_input_file, {"source_type": "text_file", "content": "This is the story of a brave little toaster making friends with a fluffy kitten."})
 
-    # These should point to your actual input files.
-    generated_images_manifest_path = workspace_path / "generated_images_manifest.json"
-    image_segments_path = workspace_path / "image_segments.json"
-    voiceover_path = workspace_path / "voiceover.wav"
+    source_id = get_source_id(str(initial_text_input_file))
+    current_workspace_path = get_workspace_path(source_id)
+    ensure_dir_exists(current_workspace_path)
 
-    # Step 10: Animate images
-    animated_clips_manifest_path = step_10_animate_images(
-        str(generated_images_manifest_path),
-        str(image_segments_path),
-        workspace_path
-    )
+    logger.info(f"Source ID: {source_id}")
+    logger.info(f"Workspace Path: {current_workspace_path}")
+    logger.info(f"Input file: {initial_text_input_file}")
 
-    # Step 11: Assemble video (if you want to run this step)
-    if animated_clips_manifest_path:
-        step_11_assemble_video_moviepy(
-            str(voiceover_path),
-            animated_clips_manifest_path,
-            workspace_path
+    # --- Pipeline Execution ---
+    processed_text_path = step_01_process_text_input(str(initial_text_input_file), current_workspace_path)
+
+    generated_script_path = None
+    if processed_text_path:
+        script_instructions = "Create a short, engaging script suitable for a YouTube short, focusing on visuals."
+        generated_script_path = step_03_generate_gemini_script(processed_text_path, current_workspace_path, script_instructions=script_instructions)
+    else: logger.warning("Skipping Step 03: Processed text path is not available.")
+
+    voiceover_audio_path = None
+    if generated_script_path:
+        voiceover_audio_path = step_04_generate_tts_kokoro(generated_script_path, current_workspace_path)
+    else: logger.warning("Skipping Step 04: Generated script path is not available.")
+
+    transcribed_audio_path = None
+    if voiceover_audio_path: # Step 05 uses voiceover_audio_path as input
+        transcribed_audio_path = step_05_transcribe_audio_local_whisper(voiceover_audio_path, current_workspace_path)
+    else: logger.warning("Skipping Step 05: Voiceover audio path is not available.")
+
+    corrected_transcript_path = None
+    if transcribed_audio_path: # Step 06 uses transcribed_audio_path as input
+        corrected_transcript_path = step_06_correct_spelling(transcribed_audio_path, current_workspace_path)
+    else: logger.warning("Skipping Step 06: Transcribed audio path is not available.")
+
+    image_segments_path = None
+    if corrected_transcript_path:
+        image_segments_path = step_07_parse_transcript_for_image_segments(corrected_transcript_path, current_workspace_path)
+    else: logger.warning("Skipping Step 07: Corrected transcript path is not available.")
+
+    image_prompts_path = None
+    if image_segments_path:
+        image_prompts_path = step_08_generate_image_prompts_groq(image_segments_path, current_workspace_path, gemini_script_path_str=generated_script_path)
+    else: logger.warning("Skipping Step 08: Image segments path is not available.")
+
+    generated_images_manifest_path = None
+    if image_prompts_path:
+        generated_images_manifest_path = step_09_generate_images_comfyui(image_prompts_path, current_workspace_path)
+    else: logger.warning("Skipping Step 09: Image prompts path is not available.")
+
+    animated_clips_manifest_path = None
+    if generated_images_manifest_path and image_segments_path:
+        animated_clips_manifest_path = step_10_animate_images(
+            generated_images_manifest_path, image_segments_path, current_workspace_path
         )
+    else: logger.warning("Skipping Step 10: Generated images manifest or image segments path is not available.")
 
-    logger.info("Video pipeline run complete.")
+    final_video_path = None
+    if voiceover_audio_path and animated_clips_manifest_path:
+        # Pass FINAL_VIDEO_DIR, current_workspace_path, and source_id to step_11
+        final_video_path = step_11_assemble_video_moviepy(
+            voiceover_audio_path, animated_clips_manifest_path, FINAL_VIDEO_DIR, current_workspace_path, source_id
+        )
+    else: logger.warning("Skipping Step 11: Voiceover audio path or animated clips manifest path is not available.")
 
-# /// END OF CODE TO PASTE ///
+    if final_video_path:
+        logger.info(f"Video pipeline run complete. Final video available at: {final_video_path}")
+    else:
+        logger.error("Video pipeline run did not complete successfully. Final video was not generated.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-
-
-
-
-
-
-
-
-# >>>>>>> REPLACE
-# I've applied the docstrings and comments to the animation functions in `video_pipeline.py` and refactored `step_10_animate_images` to use the full suite of animations with randomized parameters.
-
-# **Summary of `video_pipeline.py` Changes:**
-
-# 1.  **Docstrings and Comments:**
-#     *   Added docstrings to all easing functions (`_ease_in_quad`, `_ease_out_quad`, `_ease_in_out_quad`).
-#     *   Added a detailed docstring to `_prepare_image_for_animation`.
-#     *   Added docstrings to all individual animation effect functions (`_animate_static`, `_animate_zoom_in`, `_animate_zoom_out`, `_animate_pan`, `_animate_diag_pan_zoom_in`, `_animate_zoom_in_fade_in`, `_animate_rotate_zoom`), explaining their effect and main parameters.
-#     *   Added comments explaining the purpose of `ANIMATION_RECIPES` and `ANIMATION_COVER_SCALES`.
-#     *   `step_10_animate_images` now has a comprehensive docstring outlining its role.
-# 2.  **Refined `_animate_zoom_out`**: The resize lambda was corrected to ensure it zooms out from the `zoom_factor` (relative to the prepared clip's already scaled size) down to 1.0x of the prepared clip's size.
-# 3.  **Refined `_animate_static`**: Ensures the image is scaled to *fit within* the target dimensions if the prepared image (which might have been scaled for other animations like panning) is larger than the screen.
-# 4.  **Keyword Arguments (`**kwargs`) in Animation Functions**: Added `**kwargs` to most animation function signatures to gracefully accept unused parameters (like `ef` in static, or specific zoom factors if a generic lambda calls them). The core parameters are still explicitly listed.
-# 5.  **Updated `ANIMATION_RECIPES` Lambdas**:
-#     *   Lambdas for complex animations (pans, diagonals, rotate_zoom, zoom_fade_in) are updated to correctly pass the dictionary of randomized parameters (`**k` or specific named args like `zf`, `ef`, `ad`, `fdr`) to their respective implementation functions.
-# 6.  **Parameter Randomization in `step_10_animate_images`**:
-#     *   The main loop now correctly prepares a `kwargs_for_anim` dictionary which includes a randomly selected `ease_func`.
-#     *   It then adds specific randomized parameters (like `zoom_factor`, `angle_deg`, `fade_duration_ratio`) to this `kwargs_for_anim` dictionary based on the `chosen_anim_name`.
-#     *   The chosen animation function is called with `**kwargs_for_anim`.
-#     *   The `current_params` dictionary (for the manifest) correctly logs these randomized values.
-# 7.  **Corrected `moviepy_vfx_all` Usage**: Used `moviepy_vfx_all.fadein` and `moviepy_vfx_all.rotate` for clarity when accessing effects from the `all` module.
-# 8.  **Constants**: Renamed `SCREEN_W, SCREEN_H, FPS` within `step_10_animate_images` to `ANIM_SCREEN_W, ANIM_SCREEN_H, ANIM_FPS` to avoid potential conflicts if these were ever made global with different values for other steps.
-
-# Now, I will update the `README.md` file.

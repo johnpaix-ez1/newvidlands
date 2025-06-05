@@ -1,0 +1,28 @@
+{
+    "status": "dummy output from placeholder step_07",
+    "input_transcript": "/app/workspace/text1_fae25696/corrected_transcript.json",
+    "segments_data": {
+        "segments": [
+            {
+                "segment_id": "scene_001_seg_001",
+                "text_segment": "Dummy segment text if transcript is unavailable. (Dummy Part 1)",
+                "start_time": 0.0,
+                "end_time": 3.0,
+                "image_keywords": [
+                    "placeholder",
+                    "scene1"
+                ]
+            },
+            {
+                "segment_id": "scene_001_seg_002",
+                "text_segment": "Dummy segment text if transcript is unavailable. (Dummy Part 2)",
+                "start_time": 3.0,
+                "end_time": 6.0,
+                "image_keywords": [
+                    "placeholder",
+                    "scene2"
+                ]
+            }
+        ]
+    }
+}

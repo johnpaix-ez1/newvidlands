@@ -1,0 +1,28 @@
+{
+    "generated_images": [
+        {
+            "prompt_id": "scene_001_seg_001",
+            "prompt_text": "Creative placeholder image prompt for 'Dummy segment text if transcri...'. Style: vibrant illustration.",
+            "image_path_local": "/app/workspace/text1_977ef7f0/generated_images_comfyui/img_scene_001_seg_001.png",
+            "status": "dummy_generated_placeholder",
+            "source_prompt_info": {
+                "prompt_id": "scene_001_seg_001",
+                "prompt_text": "Creative placeholder image prompt for 'Dummy segment text if transcri...'. Style: vibrant illustration.",
+                "original_text_segment": "Dummy segment text if transcript is unavailable. (Dummy Part 1)",
+                "segment_id": "scene_001_seg_001"
+            }
+        },
+        {
+            "prompt_id": "scene_001_seg_002",
+            "prompt_text": "Creative placeholder image prompt for 'Dummy segment text if transcri...'. Style: vibrant illustration.",
+            "image_path_local": "/app/workspace/text1_977ef7f0/generated_images_comfyui/img_scene_001_seg_002.png",
+            "status": "dummy_generated_placeholder",
+            "source_prompt_info": {
+                "prompt_id": "scene_001_seg_002",
+                "prompt_text": "Creative placeholder image prompt for 'Dummy segment text if transcri...'. Style: vibrant illustration.",
+                "original_text_segment": "Dummy segment text if transcript is unavailable. (Dummy Part 2)",
+                "segment_id": "scene_001_seg_002"
+            }
+        }
+    ]
+}

@@ -1,0 +1,19 @@
+{
+    "status": "dummy output from placeholder step_03",
+    "input_processed_text": "/app/workspace/text1_fae25696/processed_text.json",
+    "script": {
+        "title": "Dummy Title from Placeholder",
+        "scenes": [
+            {
+                "scene_number": 1,
+                "narration": "This is a dummy narration for scene 1.",
+                "visual_description": "A placeholder visual for scene 1."
+            },
+            {
+                "scene_number": 2,
+                "narration": "This is another dummy narration for scene 2.",
+                "visual_description": "A placeholder visual for scene 2."
+            }
+        ]
+    }
+}

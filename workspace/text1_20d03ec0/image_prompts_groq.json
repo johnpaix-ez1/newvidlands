@@ -1,0 +1,18 @@
+{
+    "status": "dummy output from placeholder step_08",
+    "input_segments": "/app/workspace/text1_20d03ec0/image_segments.json",
+    "prompts": {
+        "image_prompts": [
+            {
+                "prompt_id": "seg_001",
+                "prompt_text": "Placeholder image prompt for segment 1 (Groq). Style: cinematic.",
+                "original_text_segment": "Dummy text for segment 1."
+            },
+            {
+                "prompt_id": "seg_002",
+                "prompt_text": "Placeholder image prompt for segment 2 (Groq). Style: photorealistic.",
+                "original_text_segment": "Dummy text for segment 2."
+            }
+        ]
+    }
+}
