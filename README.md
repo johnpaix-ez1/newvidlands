@@ -89,6 +89,87 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
 *   **Code Editor:** A modern code editor such as [Visual Studio Code](https://code.visualstudio.com/) is recommended for easier script modification and management.
 *   **Terminal/Command Prompt:** For running the script, managing Python environments, and Git operations.
 
+## Running in Google Colab
+
+You can also run this video generation pipeline in a Google Colab notebook. This is useful for leveraging Google's free GPU resources (subject to availability and limits) for tasks like AI model inference and for an environment where Python and many common libraries are already accessible.
+
+A dedicated Colab notebook, `video_pipeline_colab.ipynb`, is provided in this repository.
+
+### Prerequisites for Colab
+
+*   A Google Account.
+*   Access to Google Drive.
+*   It's recommended to clone this repository or at least download the `video_pipeline_colab.ipynb` file and the entire `assets/` directory.
+
+### Setup and Usage in Colab
+
+1.  **Upload to Google Drive:**
+    *   Create a main project folder in your Google Drive, for example, `VideoPipelineProject`.
+    *   Upload the `video_pipeline_colab.ipynb` notebook into this `VideoPipelineProject` folder (or directly to your Drive root if you prefer, but you'll need to adjust paths in the notebook).
+    *   Upload the entire `assets/` directory (from this repository) into your `VideoPipelineProject` folder in Google Drive, so you have `VideoPipelineProject/assets/`.
+        *   **Kokoro TTS Models:** You **must** obtain the Kokoro TTS model files (`kokoro-v1.0.onnx` and `voices-v1.0.bin` as mentioned in the main "Installation > Set Up Assets" section) and place them in a location accessible from your Drive, for example, within the `VideoPipelineProject/assets/kokoro_models/` directory. Then, ensure the paths in the "Configure External Services and Model Paths" setup cell in the notebook correctly point to these files.
+    *   Upload your input files (e.g., text source JSON files) to the appropriate subdirectory within your `VideoPipelineProject` folder, for example, `VideoPipelineProject/input/text_sources/`.
+
+2.  **Open and Configure Notebook:**
+    *   Open Google Colab and upload/open the `video_pipeline_colab.ipynb` notebook from your Google Drive.
+    *   Carefully follow the instructions in the **Setup** section at the beginning of the notebook:
+        *   **Run pip installs:** Execute the cell that installs all required Python packages.
+        *   **Configure API Keys:** Enter your API keys for Google Gemini and Groq when prompted by the input fields (or modify the cells to use Colab UserData secrets).
+        *   **Mount Google Drive:** Run the cell to mount your Google Drive. You'll need to authorize this.
+        *   **Verify Paths:**
+            *   Check and, if necessary, modify the `DRIVE_PROJECT_BASE_PATH` variable in the "Define File Paths" cell to match the location where you placed the `VideoPipelineProject` folder in your Drive (e.g., `/content/drive/MyDrive/VideoPipelineProject`).
+            *   Verify that paths to assets like `COMFYUI_WORKFLOW_FILE`, `KOKORO_MODEL_FILE_PATH`, `ENDSCREEN_VIDEO_FILE` in the "Configure External Services and Model Paths" cell are correct based on where you uploaded the `assets` directory and Kokoro models.
+        *   **ComfyUI Server:** If you plan to use ComfyUI, ensure the `COMFYUI_SERVER_ADDRESS` in the notebook is correctly set to your accessible ComfyUI instance (this might involve using ngrok if your ComfyUI is local).
+
+3.  **Run the Pipeline:**
+    *   Once the setup cells are executed and configured, you can proceed to run the subsequent cells containing the pipeline logic.
+    *   The `main()` function cell defines an example `input_text_path`. You may need to modify this path to point to your specific input file within the `INPUT_DIR` on your Google Drive.
+    *   Run the final cell that calls `main()` to start the video generation process.
+
+4.  **Outputs:**
+    *   Final videos and logs will be saved to the directories specified in the notebook's path definitions (e.g., `VideoPipelineProject/final_videos/` and `VideoPipelineProject/logs/` on your Google Drive).
+
+### Notes for Colab Usage
+
+*   **Resource Limits:** Be mindful of Colab's usage limits for CPU, GPU, RAM, and disk space. Long or complex video processing can be resource-intensive.
+*   **Session Storage:** Files saved outside of your mounted Google Drive (e.g., directly in `/content/`) are temporary and will be deleted when the Colab session ends. The notebook is configured to save outputs to your Drive.
+*   **Interactivity:** The Colab notebook runs the script non-interactively by default (executing the `main` function directly). The interactive menu from the original `video_pipeline.py` is not the primary mode of operation in the notebook.
+
+[Link to the Colab Notebook: video_pipeline_colab.ipynb](./video_pipeline_colab.ipynb)
+
+## Troubleshooting
+### General Setup Issues
+
+## Prerequisites
+
+### Software
+
+*   **Python:** Python 3.10 or newer is recommended.
+*   **FFmpeg:** Required by MoviePy (for video editing) and yt-dlp (for audio extraction from video links). FFmpeg must be installed on your system and accessible via the system's PATH. You can download it from [ffmpeg.org](https://ffmpeg.org/download.html).
+*   **Git:** For cloning this repository and managing updates.
+
+### External Services & Setups
+
+*   **Google Gemini API Key:** Necessary for automated script generation (Step 03). The script will exit if not configured.
+    *   Obtain an API key from [Google AI Studio](https://aistudio.google.com/app/apikey) or your Google Cloud Console project.
+*   **Groq API Key:** Required for generating image prompts from text segments (Step 08). The script will exit if not configured.
+    *   Obtain an API key from the [GroqCloud Console](https://console.groq.com/keys).
+*   **ComfyUI Server:** A running instance of ComfyUI is essential for image generation (Step 09). The script will exit if the server address is not configured or the workflow file is missing/invalid.
+    *   The server must be accessible via HTTP (for API calls like fetching history) and WebSocket (for real-time progress updates and image fetching). The `video_pipeline.py` script will prefix `http://` or `ws://` as needed, so provide only `host:port` (e.g., `127.0.0.1:8188`) in the `.env` configuration.
+    *   For installation and setup instructions, refer to the [ComfyUI GitHub repository](https://github.com/comfyanonymous/ComfyUI).
+    *   You will also need a ComfyUI workflow JSON file that is compatible with the API. A default placeholder is provided in `assets/default_comfyui_workflow.json`, but should be replaced with a functional workflow. The script will check for its existence.
+*   **Kokoro TTS Models:** For actual Text-to-Speech generation with Kokoro-TTS (Step 04), you need the model and voices files. If the Kokoro library is available but these files are not found at the configured paths, the script will exit.
+    *   Download `kokoro-v1.0.onnx` and `voices-v1.0.bin` from the [Kokoro-ONNX GitHub releases page](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0).
+    *   These files need to be placed in a location accessible by the script, configured via `.env` variables (see Installation section). If not provided or found (and Kokoro is installed), dummy TTS audio will be generated.
+*   **(Optional) YouTube Cookies:** If you plan to process age-restricted or login-required YouTube videos using `yt-dlp`, you may need to provide a browser cookie file.
+    *   This can be configured via the `YTDLP_COOKIES_FILE` variable in your `.env` file.
+    *   Refer to `yt-dlp` documentation for instructions on how to export cookies (e.g., using a browser extension).
+
+### Development Tools (Optional but Recommended)
+
+*   **Code Editor:** A modern code editor such as [Visual Studio Code](https://code.visualstudio.com/) is recommended for easier script modification and management.
+*   **Terminal/Command Prompt:** For running the script, managing Python environments, and Git operations.
+
 ## Installation
 
 1.  **Clone the Repository:**
