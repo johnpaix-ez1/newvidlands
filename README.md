@@ -69,17 +69,17 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
 
 ### External Services & Setups
 
-*   **Google Gemini API Key:** Necessary for automated script generation (Step 03).
+*   **Google Gemini API Key:** Necessary for automated script generation (Step 03). The script will exit if not configured.
     *   Obtain an API key from [Google AI Studio](https://aistudio.google.com/app/apikey) or your Google Cloud Console project.
-*   **Groq API Key:** Required for generating image prompts from text segments (Step 08).
+*   **Groq API Key:** Required for generating image prompts from text segments (Step 08). The script will exit if not configured.
     *   Obtain an API key from the [GroqCloud Console](https://console.groq.com/keys).
-*   **ComfyUI Server:** A running instance of ComfyUI is essential for image generation (Step 09).
+*   **ComfyUI Server:** A running instance of ComfyUI is essential for image generation (Step 09). The script will exit if the server address is not configured or the workflow file is missing/invalid.
     *   The server must be accessible via HTTP (for API calls like fetching history) and WebSocket (for real-time progress updates and image fetching). The `video_pipeline.py` script will prefix `http://` or `ws://` as needed, so provide only `host:port` (e.g., `127.0.0.1:8188`) in the `.env` configuration.
     *   For installation and setup instructions, refer to the [ComfyUI GitHub repository](https://github.com/comfyanonymous/ComfyUI).
-    *   You will also need a ComfyUI workflow JSON file that is compatible with the API. A default placeholder is provided in `assets/default_comfyui_workflow.json`, but should be replaced with a functional workflow.
-*   **Kokoro TTS Models:** For actual Text-to-Speech generation with Kokoro-TTS (Step 04), you need the model and voices files.
+    *   You will also need a ComfyUI workflow JSON file that is compatible with the API. A default placeholder is provided in `assets/default_comfyui_workflow.json`, but should be replaced with a functional workflow. The script will check for its existence.
+*   **Kokoro TTS Models:** For actual Text-to-Speech generation with Kokoro-TTS (Step 04), you need the model and voices files. If the Kokoro library is available but these files are not found at the configured paths, the script will exit.
     *   Download `kokoro-v1.0.onnx` and `voices-v1.0.bin` from the [Kokoro-ONNX GitHub releases page](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0).
-    *   These files need to be placed in a location accessible by the script, configured via `.env` variables (see Installation section). If not provided or found, dummy TTS audio will be generated.
+    *   These files need to be placed in a location accessible by the script, configured via `.env` variables (see Installation section). If not provided or found (and Kokoro is installed), dummy TTS audio will be generated.
 *   **(Optional) YouTube Cookies:** If you plan to process age-restricted or login-required YouTube videos using `yt-dlp`, you may need to provide a browser cookie file.
     *   This can be configured via the `YTDLP_COOKIES_FILE` variable in your `.env` file.
     *   Refer to `yt-dlp` documentation for instructions on how to export cookies (e.g., using a browser extension).
@@ -246,6 +246,10 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
     *   **Solution:** Double-check that your `GEMINI_API_KEY` in the `.env` file is correct and has been activated for use with the Gemini API. Ensure the API is enabled in your Google Cloud project associated with the key. Check your usage quotas in the Google AI Studio or Google Cloud Console.
 *   **Problem:** Errors related to the Groq API (e.g., authentication, rate limits).
     *   **Solution:** Verify that the `GROQ_API_KEY` in your `.env` file is correct. Check the GroqCloud platform for API status, any potential rate limits, or issues with your account.
+*   **Important Change: Stricter Configuration Enforcement**
+    *   The pipeline will now terminate with an error if essential API keys (like `GEMINI_API_KEY`, `GROQ_API_KEY`) or critical configurations (such as `COMFYUI_SERVER_ADDRESS`, paths to Kokoro models if Kokoro library is present, or a valid ComfyUI workflow file) are not properly set in your `.env` file or if specified files are missing.
+    *   This replaces previous behavior where some steps might have proceeded using placeholder or dummy data.
+    *   Please ensure all required configurations are accurate in your `.env` file and that all necessary files (e.g., Kokoro models, ComfyUI workflow) are present at the specified paths to prevent interruption.
 *   **Problem:** ComfyUI connection errors (e.g., `ConnectionRefusedError` when the script tries to connect to the ComfyUI server).
     *   **Solution:**
         *   Make sure your ComfyUI server instance is running.
@@ -262,10 +266,10 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
 
 *   **Problem:** Errors from `kokoro-onnx` or `onnxruntime` during Text-to-Speech (TTS) generation, or dummy TTS is always used.
     *   **Solution:**
-        *   Ensure `KOKORO_MODEL_FILE_PATH` and `KOKORO_VOICES_FILE_PATH` in your `.env` file correctly point to your downloaded `kokoro-v1.0.onnx` and `voices-v1.0.bin` files.
+        *   Ensure `KOKORO_MODEL_FILE_PATH` and `KOKORO_VOICES_FILE_PATH` in your `.env` file correctly point to your downloaded `kokoro-v1.0.onnx` and `voices-v1.0.bin` files. If the Kokoro library itself is installed, the script will now exit if these files are not found at the specified paths.
         *   Verify the files were downloaded correctly and are not corrupted from the [Kokoro-ONNX GitHub releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0).
         *   These libraries can sometimes have specific compatibility requirements. Ensure you are using a compatible Python version. There might be version conflicts with `onnxruntime` or other dependencies. Check the `kokoro-onnx` GitHub repository for any reported issues.
-        *   The script is designed to fall back to dummy TTS if Kokoro-TTS fails, allowing the pipeline to continue.
+        *   If the Kokoro library (`kokoro-onnx`) is not installed, the script will still fall back to dummy TTS.
 *   **Problem:** Errors from `openai-whisper` during audio transcription (e.g., model download failure, `ffmpeg` not found by Whisper, CUDA errors if using GPU).
     *   **Solution:**
         *   A stable internet connection is needed when Whisper downloads a model for the first time.

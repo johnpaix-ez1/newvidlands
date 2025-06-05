@@ -1,4 +1,5 @@
 import os
+import sys # Added for sys.exit()
 import json
 import pathlib
 import logging
@@ -761,12 +762,22 @@ def main():
     # video_info = step_02_process_video_link_input("https://example.com/video", workspace_path)
 
     # Step 3: Generate Gemini script
+    if not GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY is not set. Please configure it in your .env file. Exiting.")
+        sys.exit(1)
     script_path = step_03_generate_gemini_script(processed_text, workspace_path)
     if not script_path:
         logger.error("Step 3 failed.")
         return
 
     # Step 4: Generate TTS
+    if KOKORO_AVAILABLE: # Only check paths if Kokoro library is available
+        if not KOKORO_MODEL_FILE_PATH or not pathlib.Path(KOKORO_MODEL_FILE_PATH).exists():
+            logger.error(f"Kokoro TTS model file not found at specified path: {KOKORO_MODEL_FILE_PATH}. Please configure KOKORO_MODEL_FILE_PATH in .env and ensure the file exists. Exiting.")
+            sys.exit(1)
+        if not KOKORO_VOICES_FILE_PATH or not pathlib.Path(KOKORO_VOICES_FILE_PATH).exists():
+            logger.error(f"Kokoro TTS voices file not found at specified path: {KOKORO_VOICES_FILE_PATH}. Please configure KOKORO_VOICES_FILE_PATH in .env and ensure the file exists. Exiting.")
+            sys.exit(1)
     tts_path = step_04_generate_tts_kokoro(script_path, workspace_path)
     if not tts_path:
         logger.error("Step 4 failed.")
@@ -791,12 +802,32 @@ def main():
         return
 
     # Step 8: Generate image prompts
+    if not GROQ_API_KEY:
+        logger.error("GROQ_API_KEY is not set. Please configure it in your .env file. Exiting.")
+        sys.exit(1)
     image_prompts = step_08_generate_image_prompts_groq(image_segments, workspace_path)
     if not image_prompts:
         logger.error("Step 8 failed.")
         return
 
     # Step 9: Generate images
+    if not COMFYUI_SERVER_ADDRESS: # Check if it's None or empty
+        logger.error("COMFYUI_SERVER_ADDRESS is not set. Please configure it in your .env file. Exiting.")
+        sys.exit(1)
+
+    # Check COMFYUI_WORKFLOW_FILE
+    # Default path is str(ASSETS_DIR / "default_comfyui_workflow.json")
+    # If it's the default, and default doesn't exist OR if it's a custom path and that path doesn't exist
+    comfyui_workflow_path = pathlib.Path(COMFYUI_WORKFLOW_FILE)
+    is_default_workflow_path = (COMFYUI_WORKFLOW_FILE == str(ASSETS_DIR / "default_comfyui_workflow.json"))
+
+    if not comfyui_workflow_path.exists():
+        if is_default_workflow_path:
+            logger.error(f"ComfyUI default workflow file ({COMFYUI_WORKFLOW_FILE}) not found. Please ensure it exists or configure a valid path in COMFYUI_WORKFLOW_FILE. Exiting.")
+        else:
+            logger.error(f"ComfyUI workflow file specified in COMFYUI_WORKFLOW_FILE ({COMFYUI_WORKFLOW_FILE}) not found. Please configure a valid path. Exiting.")
+        sys.exit(1)
+
     images_manifest = step_09_generate_images_comfyui(image_prompts, workspace_path)
     if not images_manifest:
         logger.error("Step 9 failed.")
