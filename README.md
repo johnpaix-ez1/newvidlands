@@ -10,7 +10,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
   - [Running the Script](#running-the-script)
-  - [Input Modes (Interactive Menu)](#input-modes-interactive-menu)
+  - [Input Modes](#input-modes)
   - [Output](#output)
 - [Troubleshooting](#troubleshooting)
   - [General Setup Issues](#general-setup-issues)
@@ -22,6 +22,7 @@
   - [Python Virtual Environments](#python-virtual-environments)
   - [Hardware Resources](#hardware-resources)
   - [Development & Experimentation](#development--experimentation)
+- [Future Enhancements](#future-enhancements)
 
 ## Project Overview
 
@@ -37,20 +38,24 @@ The pipeline offers a comprehensive suite of capabilities to automate video crea
     *   JSON text files (containing lists of text segments or structured content).
     *   Direct links to YouTube videos (for re-purposing or analysis-driven content generation).
 *   **Automated Script Generation:** Utilizes the Gemini API to generate video scripts based on the input content.
-*   **Text-to-Speech Voiceover:** Employs Kokoro-TTS (via `kokoro-onnx`) to create natural-sounding voiceovers from the generated scripts.
-*   **Audio Transcription:** Integrates a local Whisper model for accurate audio transcription, including word-level timestamps.
-*   **Spelling Correction:** Automatically corrects spelling errors in the generated transcripts to ensure text quality.
-*   **Transcript Segmentation for Visuals:** Parses the transcript to define logical segments for timing image and animation sequences.
-*   **AI-Powered Image Prompt Generation:** Leverages the Groq API (with Llama3-70b model) to create descriptive image prompts tailored to each text segment.
-*   **Image Generation:** Interfaces with ComfyUI (via its API and WebSocket) to generate images based on the AI-generated prompts.
-*   **Dynamic Image Animation:** Animates still images using MoviePy with a diverse suite of randomized effects. Capabilities include Ken Burns style zooms (in/out), multi-directional pans (horizontal, vertical), diagonal pan/zoom combinations, rotations with zoom, and fade-ins, all utilizing smooth easing functions.
-*   **Video Assembly:** Combines the synthesized voiceover, animated image clips, and optional background music into a cohesive video sequence using MoviePy.
-*   **Automated Caption Generation:** Creates styled, segment-level captions from the transcript and overlays them onto the video, synchronized with the voiceover, using MoviePy.
-*   **Customizable Endscreen:** Allows for the addition of a pre-defined endscreen video to the final output.
-*   **Resumable Workflow:** Each major processing step marks its completion, enabling the pipeline to resume from where it left off in case of interruptions.
-*   **Automated Workspace Management:** Organizes intermediate files within a per-source workspace, which is then archived to a logs directory upon completion for review and cleanup.
-*   **Batch Processing:** Supports processing multiple inputs sequentially via menu options (e.g., all topics from `channeltopics.json` or all links from `Newlinks.txt`).
-*   **Configuration via `.env`:** Key API credentials, paths, and server addresses are managed through an environment file (`.env`) for security and ease of setup.
+*   **Text-to-Speech Voiceover:** Employs Kokoro-TTS (via `kokoro-onnx` and user-provided models) to create natural-sounding voiceovers from the generated scripts. Dummy TTS is used if models are not configured.
+*   **Audio Transcription:** Integrates a local Whisper model (default: "base") for accurate audio transcription, including word-level timestamps. Falls back to dummy transcription if Whisper is unavailable.
+*   **Spelling Correction:** Automatically corrects spelling errors in the generated transcripts using `pyspellchecker`. Continues with uncorrected text if the library is unavailable.
+*   **Transcript Segmentation for Visuals:** Parses the transcript to define logical segments for timing image and animation sequences, using a customizable duration logic.
+*   **AI-Powered Image Prompt Generation:** Leverages the Groq API (with Llama3-70b model by default) to create descriptive image prompts tailored to each text segment. Falls back to basic prompts if API access fails.
+*   **Image Generation:** Interfaces with a ComfyUI server (via its API and WebSocket) to generate images based on the AI-generated prompts. Requires a user-configured ComfyUI instance and workflow. Falls back to dummy images if ComfyUI is not configured or fails.
+*   **Dynamic Image Animation:** Animates still images using MoviePy with a diverse suite of randomized effects. Capabilities include static display, Ken Burns style zooms (in/out with easing), multi-directional pans (horizontal, vertical), diagonal pan/zoom combinations, rotations with zoom, and fade-ins. Animation parameters like zoom factor, angle, and easing functions are randomized for variety. Falls back to static animations if MoviePy has issues or if specific effects fail.
+*   **Video Assembly:** Combines the synthesized voiceover, animated image clips, and optional background music (randomly selected from an `assets/bgsound` directory) into a cohesive video sequence using MoviePy.
+*   **Automated Caption Generation:** Creates styled, segment-level captions from the transcript and overlays them onto the video, synchronized with the voiceover, using MoviePy. Font and basic styling are configurable. Falls back to video without captions if captioning fails.
+*   **Customizable Endscreen:** Allows for the addition of a pre-defined endscreen video (configured via `.env`) to the final output. Skips if endscreen is not configured or invalid.
+*   **Resumable Workflow:** Each major processing step marks its completion in the workspace, enabling the pipeline to resume from where it left off in case of interruptions.
+*   **Automated Workspace Management:** Organizes all intermediate files for each source within a dedicated workspace directory. Upon successful completion of a source (or critical failure), this workspace is archived into the `logs/{source_id}/` directory for review, and the final video is moved to `final_videos/`.
+*   **Batch Processing & Interactive Mode:**
+    *   Prioritizes processing new text sources listed in `channeltopics.json`.
+    *   Then processes new YouTube links listed in `input/Newlinks.txt`.
+    *   Tracks processed items in log files (`logs/used_channeltopics.json`, `logs/used_newlinks.txt`) to avoid redundant work across sessions.
+    *   If no pending batch items are found, an interactive menu allows for single file/link processing, re-checking batch queues, or exiting.
+*   **Configuration via `.env`:** Key API credentials, paths to models/assets, and server addresses are managed through an environment file (`.env`) for security and ease of setup. Example batch files and asset placeholders are created on first run if missing.
 
 This pipeline aims to significantly reduce the manual effort involved in creating short-form informational or entertainment videos.
 
@@ -69,12 +74,12 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
 *   **Groq API Key:** Required for generating image prompts from text segments (Step 08).
     *   Obtain an API key from the [GroqCloud Console](https://console.groq.com/keys).
 *   **ComfyUI Server:** A running instance of ComfyUI is essential for image generation (Step 09).
-    *   The server must be accessible via HTTP (for API calls like fetching history) and WebSocket (for real-time progress updates and image fetching). The `video_pipeline.py` script will prefix `http://` or `ws://` as needed, so provide only `host:port` in the configuration.
+    *   The server must be accessible via HTTP (for API calls like fetching history) and WebSocket (for real-time progress updates and image fetching). The `video_pipeline.py` script will prefix `http://` or `ws://` as needed, so provide only `host:port` (e.g., `127.0.0.1:8188`) in the `.env` configuration.
     *   For installation and setup instructions, refer to the [ComfyUI GitHub repository](https://github.com/comfyanonymous/ComfyUI).
     *   You will also need a ComfyUI workflow JSON file that is compatible with the API. A default placeholder is provided in `assets/default_comfyui_workflow.json`, but should be replaced with a functional workflow.
 *   **Kokoro TTS Models:** For actual Text-to-Speech generation with Kokoro-TTS (Step 04), you need the model and voices files.
     *   Download `kokoro-v1.0.onnx` and `voices-v1.0.bin` from the [Kokoro-ONNX GitHub releases page](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0).
-    *   These files need to be placed in a location accessible by the script, configured via `.env` variables (see Installation). If not provided or found, dummy TTS audio will be generated.
+    *   These files need to be placed in a location accessible by the script, configured via `.env` variables (see Installation section). If not provided or found, dummy TTS audio will be generated.
 *   **(Optional) YouTube Cookies:** If you plan to process age-restricted or login-required YouTube videos using `yt-dlp`, you may need to provide a browser cookie file.
     *   This can be configured via the `YTDLP_COOKIES_FILE` variable in your `.env` file.
     *   Refer to `yt-dlp` documentation for instructions on how to export cookies (e.g., using a browser extension).
@@ -144,7 +149,7 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
         *   `YTDLP_COOKIES_FILE`: (Optional) Absolute or relative path to your `cookies.txt` file for `yt-dlp`.
 
 5.  **Set Up Assets:**
-    The pipeline expects certain assets to be present in the `assets/` directory. Default placeholder files are provided for some.
+    The pipeline expects certain assets to be present in the `assets/` directory. Default placeholder files are provided for some, and example batch files are created on first run.
     *   **ComfyUI Workflow (`assets/default_comfyui_workflow.json` or custom path):**
         *   The file specified by `COMFYUI_WORKFLOW_FILE` in your `.env` file must be a valid ComfyUI API workflow JSON.
         *   The default `assets/default_comfyui_workflow.json` is a **placeholder** and **must be replaced** with your own functional workflow designed for API use.
@@ -163,73 +168,61 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
     *   **Endscreen Video (`assets/default_endscreen.mp4` or custom path):**
         *   The file specified by `ENDSCREEN_VIDEO_FILE` should be your desired endscreen video.
         *   The provided `assets/default_endscreen.mp4` is an empty placeholder.
+    *   **Input Files (`input/text_sources/`, `input/Newlinks.txt`, `channeltopics.json`):**
+        *   The script will create example versions of `channeltopics.json` (in the script root), `input/Newlinks.txt`, and dummy source files in `input/text_sources/` if they don't exist on first run. Edit these with your actual input topics and links.
 
 ## Usage
 
 ### Running the Script
 
-Ensure your Python virtual environment is activated and all dependencies and configurations are set up.
+Ensure your Python virtual environment is activated and all dependencies and configurations are set up as described above.
 
 To run the pipeline, execute:
 ```bash
 python video_pipeline.py
 ```
-Upon running, an interactive menu will appear, allowing you to choose an input mode.
+Upon running, the script will first attempt to process any pending items from the batch input files (`channeltopics.json` and `Newlinks.txt`). If no batch items are found, or after all batch items are processed, an interactive menu will appear, allowing you to choose further actions.
 
-### Input Modes (Interactive Menu)
+### Input Modes
 
-The script offers several ways to input content for video generation:
+The pipeline supports both batch and interactive input modes:
+
+**Batch Processing (Automatic on Startup):**
+*   The script automatically checks for and processes pending items from the following files in order:
+    1.  **Text Sources (from `channeltopics.json`):**
+        *   The script looks for `channeltopics.json` in its root directory.
+        *   This file should contain a JSON list of topic names (strings). For each topic name, the script expects a corresponding JSON source file at `input/text_sources/{topic_name}.json`.
+        *   Processed topics are logged in `logs/used_channeltopics.json` to avoid reprocessing in subsequent runs.
+    2.  **Link Sources (from `Newlinks.txt`):**
+        *   After processing all available text sources, the script checks `input/Newlinks.txt`.
+        *   Each line in this file should be a direct YouTube video URL. Lines starting with `#` are ignored.
+        *   Processed links are logged in `logs/used_newlinks.txt`.
+*   The script will loop, prioritizing text sources, then link sources, until both queues are clear for the current session.
+
+**Interactive Menu (Appears after batch processing or if queues are initially empty):**
 
 1.  **Process a single Text File:**
-    *   Choose this option from the menu.
-    *   The script will prompt you to enter the name of a text file located in the `input/` directory (e.g., `MyStory.json`).
-    *   **Expected JSON Format:** The input JSON file should contain either:
-        *   A direct list of strings, where each string is a text segment:
-            ```json
-            [
-                "This is the first paragraph of the story.",
-                "This is the second paragraph, continuing the narrative."
-            ]
-            ```
-        *   Or, an object with a specific "content" key holding a list of strings:
-            ```json
-            {
-                "title": "My Awesome Story Title",
-                "author": "VideoCreator",
-                "content": [
-                    "Segment one for the video.",
-                    "Another segment following up."
-                ]
-            }
-            ```
-        The script primarily extracts the list of strings for processing.
-
+    *   Prompts for the name of a JSON text file (e.g., `MyStory.json`) expected to be in the `input/text_sources/` directory. You can also provide a full or relative path.
+    *   **Expected JSON Format:**
+        *   A direct list of strings: `["Segment 1...", "Segment 2..."]`
+        *   Or, an object with a "content" key: `{"title": "Title", "content": ["Segment 1...", "Segment 2..."]}`
 2.  **Process a single YouTube Link:**
-    *   Choose this option from the menu.
-    *   The script will prompt you for a full YouTube video URL (e.g., `https://www.youtube.com/watch?v=dQw4w9WgXcQ`).
-    *   The pipeline will attempt to download the audio from this link to use as a basis for new content generation or analysis.
+    *   Prompts for a full YouTube video URL.
+3.  **Re-check Batch Items and Process:**
+    *   This option will cause the script to return to the batch processing mode, re-scanning `channeltopics.json` and `Newlinks.txt` for any new items not yet logged as processed.
+4.  **Exit Pipeline:**
+    *   Terminates the script.
 
-3.  **Process all topics from `channeltopics.json`:**
-    *   This option processes text files in batch mode based on entries in `channeltopics.json` (located in the script's root directory).
-    *   Each entry in `channeltopics.json` should define a topic. The script expects a corresponding `.txt` or `.json` file in the `input/` directory. For example, if `channeltopics.json` contains `{"topics": [{"name": "AI Future"}]}`, the script will look for `input/AI Future.txt` (or as specified by a `filename` key in the topic item).
-    *   The script is designed to process each topic sequentially. (Note: The current script doesn't explicitly mention moving entries to `used_channeltopics.json`, but this could be a manual or future process for tracking).
-
-4.  **Process all links from `Newlinks.txt`:**
-    *   This option processes YouTube video links in batch from the `input/Newlinks.txt` file.
-    *   Each line in `Newlinks.txt` should be a direct YouTube video URL. Lines starting with `#` are ignored as comments.
-    *   The script processes each link sequentially. (Note: Tracking of used links by moving to `used_Newlinks.txt` is a potential future enhancement, not explicitly in the current script's direct output description).
-
-5.  **(Placeholder) Generate Bible story videos:**
-    *   This menu option is a placeholder for a potential future feature and is not fully implemented in the current version.
+If an interactive processing option (1 or 2) or the re-check option (3) is chosen, the script will perform that action and then loop back to prioritize batch processing before potentially showing the menu again.
 
 ### Output
 
 *   **Final Videos:**
-    *   Successfully generated videos are saved in the `final_videos/` directory (this path is configured by `FINAL_VIDEO_DIR` in `video_pipeline.py`).
-    *   Filenames typically include the unique `source_id` generated for each input (e.g., `MyStory_json_xxxxxxx_final.mp4` or `youtube_v_xxxxxxx_final.mp4`).
+    *   Successfully generated videos are saved in the `final_videos/` directory (path is configurable via `FINAL_VIDEO_DIR` in `video_pipeline.py`, default is relative to script location).
+    *   Filenames typically include the unique `source_id` (e.g., `MyStory_json_xxxxxxx_final.mp4`).
 *   **Logs and Archives:**
-    *   **Workspace Archives:** For each processed source, all intermediate files, logs, and generated assets (like downloaded audio, individual image frames, temporary video clips) are archived. This archive is moved from the `workspace/{source_id}/` directory to `logs/{source_id}/workspace_archive/`. This helps in debugging and reviewing the generation process for a specific video.
-    *   **Application Log:** A general application log (e.g., `video_pipeline.log` if configured, or console output) captures the overall script execution, warnings, and errors. The current script primarily logs to the console, but individual step logs might be found within the archived workspace. The main `LOG_DIR` (`logs/`) also contains a `cleanup_complete.marker` for successfully archived sources.
+    *   **Workspace Archives:** For each processed source, all intermediate files are archived from `workspace/{source_id}/` to `logs/{source_id}/workspace_archive/`. This aids in debugging.
+    *   **Application Log:** The script primarily logs to the console. Detailed step outputs and any errors can be found within the console output for a specific run. The `logs/` directory also contains `used_channeltopics.json`, `used_newlinks.txt` (tracking processed batch items), and a `cleanup_complete.marker` inside each source's archive directory upon successful cleanup.
 
 This pipeline aims to significantly reduce the manual effort involved in creating short-form informational or entertainment videos.
 
@@ -270,7 +263,7 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
 *   **Problem:** Errors from `kokoro-onnx` or `onnxruntime` during Text-to-Speech (TTS) generation, or dummy TTS is always used.
     *   **Solution:**
         *   Ensure `KOKORO_MODEL_FILE_PATH` and `KOKORO_VOICES_FILE_PATH` in your `.env` file correctly point to your downloaded `kokoro-v1.0.onnx` and `voices-v1.0.bin` files.
-        *   Verify the files were downloaded correctly and are not corrupted.
+        *   Verify the files were downloaded correctly and are not corrupted from the [Kokoro-ONNX GitHub releases](https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0).
         *   These libraries can sometimes have specific compatibility requirements. Ensure you are using a compatible Python version. There might be version conflicts with `onnxruntime` or other dependencies. Check the `kokoro-onnx` GitHub repository for any reported issues.
         *   The script is designed to fall back to dummy TTS if Kokoro-TTS fails, allowing the pipeline to continue.
 *   **Problem:** Errors from `openai-whisper` during audio transcription (e.g., model download failure, `ffmpeg` not found by Whisper, CUDA errors if using GPU).
@@ -348,3 +341,18 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
         *   **Experimentation:** Trying out different library settings (e.g., various MoviePy animation parameters, different API prompts, ComfyUI workflow adjustments) before integrating them into the main script.
         *   **Visualization:** Displaying intermediate outputs like generated images, plotting audio data, or previewing short video clips.
     *   While invaluable for development, the entire automated pipeline is intended to be run via the CLI script.
+
+## Future Enhancements
+
+(Placeholder for potential future improvements)
+
+*   More sophisticated error handling and recovery within steps.
+*   Enhanced configuration options for each step (e.g., voice selection for TTS, model choice for Whisper/Gemini/Groq).
+*   GUI interface.
+*   Support for more input types.
+*   More advanced animation and visual effect options.
+*   Integration with stock media APIs.
+*   Automated quality checks.
+*   Distributed task processing.
+
+[end of README.md]
