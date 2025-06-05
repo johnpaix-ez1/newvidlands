@@ -91,6 +91,9 @@ This pipeline aims to significantly reduce the manual effort involved in creatin
 
 ## Running in Google Colab
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_USERNAME/YOUR_REPOSITORY_NAME/blob/main/video_pipeline_colab.ipynb)
+
+
 You can also run this video generation pipeline in a Google Colab notebook. This is useful for leveraging Google's free GPU resources (subject to availability and limits) for tasks like AI model inference and for an environment where Python and many common libraries are already accessible.
 
 A dedicated Colab notebook, `video_pipeline_colab.ipynb`, is provided in this repository.
@@ -113,6 +116,7 @@ A dedicated Colab notebook, `video_pipeline_colab.ipynb`, is provided in this re
 2.  **Open and Configure Notebook:**
     *   Open Google Colab and upload/open the `video_pipeline_colab.ipynb` notebook from your Google Drive.
     *   Carefully follow the instructions in the **Setup** section at the beginning of the notebook:
+        *   **(New) Clone Repository:** Run the cell that executes `!git clone ...` to download the repository files into your Colab environment. You'll need to replace the placeholder URL in that cell with the actual URL of this repository.
         *   **Run pip installs:** Execute the cell that installs all required Python packages.
         *   **Configure API Keys:** Enter your API keys for Google Gemini and Groq when prompted by the input fields (or modify the cells to use Colab UserData secrets).
         *   **Mount Google Drive:** Run the cell to mount your Google Drive. You'll need to authorize this.
