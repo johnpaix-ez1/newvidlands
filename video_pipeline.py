@@ -30,10 +30,15 @@ except ImportError:
     print("WARNING: jsonschema library not found. JSON validation (e.g., in Step 03) will be skipped.")
 
 try:
-    import kokoro_onnx.run as kokoro_speaker_module
+    from kokoro_onnx import Kokoro
+    import soundfile as sf
+    KOKORO_AVAILABLE = True
+    print("INFO: Kokoro-ONNX and soundfile imported successfully for TTS.")
 except ImportError:
-    kokoro_speaker_module = None
-    print("WARNING: kokoro_onnx.run module not found. Kokoro TTS (Step 04) will use a dummy WAV file.")
+    KOKORO_AVAILABLE = False
+    Kokoro = None # Define Kokoro as None if import fails
+    sf = None # Define sf as None
+    print("WARNING: kokoro_onnx or soundfile library not found. Kokoro TTS (Step 04) will use a dummy WAV file.")
 
 try:
     import whisper # from openai_whisper
@@ -224,6 +229,7 @@ logger.info(f"Assets directory: {ASSETS_DIR}")
 # --- Animation Helpers for Step 10 ---
 
 # Easing Functions for Animations
+    # (These are fine, ensure they are defined before step_10)
 def _ease_in_quad(t: float) -> float:
     """Quadratic easing in: starts slow, accelerates. Input t is 0.0 to 1.0."""
     return t * t
