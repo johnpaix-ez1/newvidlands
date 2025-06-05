@@ -1,0 +1,28 @@
+{
+    "status": "dummy output from placeholder step_07",
+    "input_transcript": "/app/workspace/text1_20d03ec0/corrected_transcript.json",
+    "segments_data": {
+        "segments": [
+            {
+                "segment_id": "seg_001",
+                "text_segment": "Dummy text for segment 1.",
+                "start_time": 0.0,
+                "end_time": 1.0,
+                "image_keywords": [
+                    "dummy",
+                    "segment1"
+                ]
+            },
+            {
+                "segment_id": "seg_002",
+                "text_segment": "Dummy text for segment 2.",
+                "start_time": 1.0,
+                "end_time": 2.0,
+                "image_keywords": [
+                    "dummy",
+                    "segment2"
+                ]
+            }
+        ]
+    }
+}

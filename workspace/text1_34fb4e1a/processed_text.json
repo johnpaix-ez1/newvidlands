@@ -1,0 +1,5 @@
+{
+    "status": "dummy output from placeholder step_01",
+    "input_received": "/app/input/text_sources/text1.json",
+    "processed_content": "Placeholder processed text."
+}

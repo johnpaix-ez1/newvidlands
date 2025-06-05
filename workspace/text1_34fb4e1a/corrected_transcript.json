@@ -1,0 +1,19 @@
+{
+    "status": "dummy output from placeholder step_06",
+    "input_transcript": "/app/workspace/text1_34fb4e1a/transcription_whisper.json",
+    "corrected_transcript": {
+        "status": "dummy output from placeholder step_05",
+        "input_audio": "/app/workspace/text1_34fb4e1a/voiceover.wav",
+        "transcript": {
+            "text": "This is a dummy transcript from placeholder step_05.",
+            "segments": [
+                {
+                    "id": 0,
+                    "start": 0.0,
+                    "end": 1.0,
+                    "text": "This is a dummy transcript segment."
+                }
+            ]
+        }
+    }
+}
