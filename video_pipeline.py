@@ -12,6 +12,8 @@ import subprocess
 import shutil # For step_15
 import random # For step_10 animations
 import math # For step_10 calculations
+from moviepy.editor import VideoFileClip
+
 
 # --- Attempt to import third-party libraries, with fallbacks ---
 try:
@@ -36,8 +38,8 @@ try:
     print("INFO: Kokoro-ONNX and soundfile imported successfully for TTS.")
 except ImportError:
     KOKORO_AVAILABLE = False
-    Kokoro = None # Define Kokoro as None if import fails
-    sf = None # Define sf as None
+    TTS = None  # Define TTS as None if import fails
+    sf = None
     print("WARNING: kokoro_onnx or soundfile library not found. Kokoro TTS (Step 04) will use a dummy WAV file.")
 
 try:
@@ -84,6 +86,7 @@ try:
     from moviepy.editor import (VideoFileClip, ImageClip, AudioFileClip, concatenate_videoclips,
                                 TextClip, CompositeVideoClip, concatenate_audioclips, ColorClip)
     import moviepy.video.fx.all as vfx
+    from moviepy.audio.AudioClip import CompositeAudioClip
     ImageClip_cls = ImageClip
     CompositeVideoClip_cls = CompositeVideoClip
     VideoFileClip_cls = VideoFileClip
@@ -99,7 +102,7 @@ try:
 except ImportError:
     print("WARNING: MoviePy library or its components not found. Video processing steps (animation, assembly, captioning) will use fallbacks or fail.")
 
-
+# --- Load .env and Kokoro TTS model/voices paths ---
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -108,13 +111,15 @@ except ImportError:
 except NameError: # if load_dotenv itself is not defined due to failed import
     pass
 
+# Add these lines immediately after load_dotenv()
+KOKORO_MODEL_FILE_PATH = os.getenv("KOKORO_MODEL_FILE_PATH")
+KOKORO_VOICES_FILE_PATH = os.getenv("KOKORO_VOICES_FILE_PATH")
 
 try:
     from termcolor import cprint
 except ImportError:
     cprint = lambda text, color=None, on_color=None, attrs=None: print(text) # Basic print fallback
     print("WARNING: termcolor library not found. Console output will not be colored.")
-
 
 # Basic logging setup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -127,7 +132,6 @@ WORKSPACE_DIR = SCRIPT_DIR / "workspace"
 FINAL_VIDEO_DIR = SCRIPT_DIR / "final_videos"
 LOG_DIR = SCRIPT_DIR / "logs"
 ASSETS_DIR = SCRIPT_DIR / "assets"
-
 
 # API Keys & Configuration (loaded from .env or environment, with defaults)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -628,28 +632,87 @@ def step_10_animate_images(generated_images_manifest_path_str: str, image_segmen
 
 def step_11_assemble_video_moviepy(voiceover_path_str: str, animated_clips_manifest_path_str: str, workspace_path: pathlib.Path) -> str | None:
     logger.info(f"Starting step_11_assemble_video_moviepy with voiceover: {voiceover_path_str}")
->>>>>>> REPLACE
-I've applied the docstrings and comments to the animation functions in `video_pipeline.py` and refactored `step_10_animate_images` to use the full suite of animations with randomized parameters.
 
-**Summary of `video_pipeline.py` Changes:**
+# /// START OF CODE TO PASTE ///
 
-1.  **Docstrings and Comments:**
-    *   Added docstrings to all easing functions (`_ease_in_quad`, `_ease_out_quad`, `_ease_in_out_quad`).
-    *   Added a detailed docstring to `_prepare_image_for_animation`.
-    *   Added docstrings to all individual animation effect functions (`_animate_static`, `_animate_zoom_in`, `_animate_zoom_out`, `_animate_pan`, `_animate_diag_pan_zoom_in`, `_animate_zoom_in_fade_in`, `_animate_rotate_zoom`), explaining their effect and main parameters.
-    *   Added comments explaining the purpose of `ANIMATION_RECIPES` and `ANIMATION_COVER_SCALES`.
-    *   `step_10_animate_images` now has a comprehensive docstring outlining its role.
-2.  **Refined `_animate_zoom_out`**: The resize lambda was corrected to ensure it zooms out from the `zoom_factor` (relative to the prepared clip's already scaled size) down to 1.0x of the prepared clip's size.
-3.  **Refined `_animate_static`**: Ensures the image is scaled to *fit within* the target dimensions if the prepared image (which might have been scaled for other animations like panning) is larger than the screen.
-4.  **Keyword Arguments (`**kwargs`) in Animation Functions**: Added `**kwargs` to most animation function signatures to gracefully accept unused parameters (like `ef` in static, or specific zoom factors if a generic lambda calls them). The core parameters are still explicitly listed.
-5.  **Updated `ANIMATION_RECIPES` Lambdas**:
-    *   Lambdas for complex animations (pans, diagonals, rotate_zoom, zoom_fade_in) are updated to correctly pass the dictionary of randomized parameters (`**k` or specific named args like `zf`, `ef`, `ad`, `fdr`) to their respective implementation functions.
-6.  **Parameter Randomization in `step_10_animate_images`**:
-    *   The main loop now correctly prepares a `kwargs_for_anim` dictionary which includes a randomly selected `ease_func`.
-    *   It then adds specific randomized parameters (like `zoom_factor`, `angle_deg`, `fade_duration_ratio`) to this `kwargs_for_anim` dictionary based on the `chosen_anim_name`.
-    *   The chosen animation function is called with `**kwargs_for_anim`.
-    *   The `current_params` dictionary (for the manifest) correctly logs these randomized values.
-7.  **Corrected `moviepy_vfx_all` Usage**: Used `moviepy_vfx_all.fadein` and `moviepy_vfx_all.rotate` for clarity when accessing effects from the `all` module.
-8.  **Constants**: Renamed `SCREEN_W, SCREEN_H, FPS` within `step_10_animate_images` to `ANIM_SCREEN_W, ANIM_SCREEN_H, ANIM_FPS` to avoid potential conflicts if these were ever made global with different values for other steps.
+def ensure_example_batch_files_exist():
+    """
+    Ensures example batch files exist for demonstration or testing.
+    You can expand this to generate or copy example manifests if needed.
+    """
+    example_batch_dir = SCRIPT_DIR / "example_batch"
+    ensure_dir_exists(example_batch_dir)
+    # You can add logic here to generate dummy manifests if needed.
 
-Now, I will update the `README.md` file.
+async def main():
+    """
+    Main entrypoint for the video pipeline.
+    This function should orchestrate the full workflow, calling each step in order.
+    """
+    logger.info("Starting main video pipeline workflow...")
+
+    # Example paths - adjust as needed for your project structure and input files.
+    workspace_path = WORKSPACE_DIR / "example_run"
+    ensure_dir_exists(workspace_path)
+
+    # These should point to your actual input files.
+    generated_images_manifest_path = workspace_path / "generated_images_manifest.json"
+    image_segments_path = workspace_path / "image_segments.json"
+    voiceover_path = workspace_path / "voiceover.wav"
+
+    # Step 10: Animate images
+    animated_clips_manifest_path = step_10_animate_images(
+        str(generated_images_manifest_path),
+        str(image_segments_path),
+        workspace_path
+    )
+
+    # Step 11: Assemble video (if you want to run this step)
+    if animated_clips_manifest_path:
+        step_11_assemble_video_moviepy(
+            str(voiceover_path),
+            animated_clips_manifest_path,
+            workspace_path
+        )
+
+    logger.info("Video pipeline run complete.")
+
+# /// END OF CODE TO PASTE ///
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+
+
+
+
+
+
+
+
+
+# >>>>>>> REPLACE
+# I've applied the docstrings and comments to the animation functions in `video_pipeline.py` and refactored `step_10_animate_images` to use the full suite of animations with randomized parameters.
+
+# **Summary of `video_pipeline.py` Changes:**
+
+# 1.  **Docstrings and Comments:**
+#     *   Added docstrings to all easing functions (`_ease_in_quad`, `_ease_out_quad`, `_ease_in_out_quad`).
+#     *   Added a detailed docstring to `_prepare_image_for_animation`.
+#     *   Added docstrings to all individual animation effect functions (`_animate_static`, `_animate_zoom_in`, `_animate_zoom_out`, `_animate_pan`, `_animate_diag_pan_zoom_in`, `_animate_zoom_in_fade_in`, `_animate_rotate_zoom`), explaining their effect and main parameters.
+#     *   Added comments explaining the purpose of `ANIMATION_RECIPES` and `ANIMATION_COVER_SCALES`.
+#     *   `step_10_animate_images` now has a comprehensive docstring outlining its role.
+# 2.  **Refined `_animate_zoom_out`**: The resize lambda was corrected to ensure it zooms out from the `zoom_factor` (relative to the prepared clip's already scaled size) down to 1.0x of the prepared clip's size.
+# 3.  **Refined `_animate_static`**: Ensures the image is scaled to *fit within* the target dimensions if the prepared image (which might have been scaled for other animations like panning) is larger than the screen.
+# 4.  **Keyword Arguments (`**kwargs`) in Animation Functions**: Added `**kwargs` to most animation function signatures to gracefully accept unused parameters (like `ef` in static, or specific zoom factors if a generic lambda calls them). The core parameters are still explicitly listed.
+# 5.  **Updated `ANIMATION_RECIPES` Lambdas**:
+#     *   Lambdas for complex animations (pans, diagonals, rotate_zoom, zoom_fade_in) are updated to correctly pass the dictionary of randomized parameters (`**k` or specific named args like `zf`, `ef`, `ad`, `fdr`) to their respective implementation functions.
+# 6.  **Parameter Randomization in `step_10_animate_images`**:
+#     *   The main loop now correctly prepares a `kwargs_for_anim` dictionary which includes a randomly selected `ease_func`.
+#     *   It then adds specific randomized parameters (like `zoom_factor`, `angle_deg`, `fade_duration_ratio`) to this `kwargs_for_anim` dictionary based on the `chosen_anim_name`.
+#     *   The chosen animation function is called with `**kwargs_for_anim`.
+#     *   The `current_params` dictionary (for the manifest) correctly logs these randomized values.
+# 7.  **Corrected `moviepy_vfx_all` Usage**: Used `moviepy_vfx_all.fadein` and `moviepy_vfx_all.rotate` for clarity when accessing effects from the `all` module.
+# 8.  **Constants**: Renamed `SCREEN_W, SCREEN_H, FPS` within `step_10_animate_images` to `ANIM_SCREEN_W, ANIM_SCREEN_H, ANIM_FPS` to avoid potential conflicts if these were ever made global with different values for other steps.
+
+# Now, I will update the `README.md` file.
